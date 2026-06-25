@@ -1,0 +1,6 @@
+{
+  "name": "Don Perro",
+  "description": "Premium pet store and dog hotel services featuring premium care, organic food, custom accessories, and dog boarding.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

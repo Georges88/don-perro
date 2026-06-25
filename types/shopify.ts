@@ -1,0 +1,73 @@
+export interface ShopifyImage {
+  url: string;
+  altText?: string;
+  width?: number;
+  height?: number;
+}
+
+export interface MoneyV2 {
+  amount: string;
+  currencyCode: string;
+}
+
+export interface ProductVariant {
+  id: string;
+  title: string;
+  availableForSale: boolean;
+  price: MoneyV2;
+  compareAtPrice?: MoneyV2;
+}
+
+export interface Product {
+  id: string;
+  title: string;
+  handle: string;
+  description: string;
+  vendor: string; // The Brand
+  productType: string; // Category, e.g. "Nutrition", "Accessories"
+  tags: string[];
+  featuredImage: ShopifyImage;
+  images: ShopifyImage[];
+  priceRange: {
+    minVariantPrice: MoneyV2;
+  };
+  compareAtPriceRange?: {
+    minVariantPrice: MoneyV2;
+  };
+  variants: ProductVariant[];
+  rating?: {
+    value: number;
+    count: number;
+  };
+}
+
+export interface Collection {
+  id: string;
+  title: string;
+  handle: string;
+  description?: string;
+  image?: ShopifyImage;
+}
+
+export interface Testimonial {
+  id: string;
+  name: string;
+  role: string;
+  quote: string;
+  avatarUrl: string;
+  rating: number;
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  logoUrl: string;
+}
+
+export interface HotelReservationInput {
+  ownerName: string;
+  phoneNumber: string;
+  dogAge: string;
+  vaccinationBookUrl?: string;
+  message?: string;
+}

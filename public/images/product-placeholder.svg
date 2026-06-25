@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-labelledby="title description">
+  <title id="title">Don Perro product image placeholder</title>
+  <desc id="description">A subtle paw symbol on a warm neutral background.</desc>
+  <rect width="800" height="800" fill="#f1f2ef"/>
+  <g fill="#6a5f00" opacity=".32" transform="translate(220 215)">
+    <ellipse cx="180" cy="245" rx="125" ry="105"/>
+    <ellipse cx="64" cy="105" rx="50" ry="68" transform="rotate(-25 64 105)"/>
+    <ellipse cx="154" cy="55" rx="48" ry="67" transform="rotate(-8 154 55)"/>
+    <ellipse cx="246" cy="55" rx="48" ry="67" transform="rotate(8 246 55)"/>
+    <ellipse cx="336" cy="105" rx="50" ry="68" transform="rotate(25 336 105)"/>
+  </g>
+</svg>
