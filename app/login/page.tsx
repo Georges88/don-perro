@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import AuthForm from "@/components/sections/AuthForm";
 
 export const metadata: Metadata = {
@@ -15,8 +16,16 @@ export default function LoginPage() {
       
       {/* Centered card content */}
       <div className="w-full max-w-5xl relative z-10 flex justify-center">
-        <AuthForm />
+        <Suspense fallback={<AuthFormFallback />}>
+          <AuthForm />
+        </Suspense>
       </div>
     </main>
+  );
+}
+
+function AuthFormFallback() {
+  return (
+    <div className="w-full max-w-5xl h-[720px] rounded-3xl border border-secondary/5 bg-white shadow-[0px_15px_45px_rgba(90,96,90,0.06)]" />
   );
 }

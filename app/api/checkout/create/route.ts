@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createShopifyCart } from "@/lib/shopify";
+import { CUSTOMER_ACCESS_COOKIE } from "@/lib/customerAccount";
 
 interface CheckoutLineInput {
   selectedVariantId?: string;
@@ -8,6 +9,11 @@ interface CheckoutLineInput {
 
 export async function POST(request: Request) {
   try {
+    const accessToken = getCookie(request.headers.get("cookie") || "", CUSTOMER_ACCESS_COOKIE);
+    if (!accessToken) {
+      return NextResponse.json({ error: "Please sign in before checkout." }, { status: 401 });
+    }
+
     const body = await request.json();
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : undefined;
     const linesInput = Array.isArray(body.lines) ? body.lines as CheckoutLineInput[] : [];
@@ -28,4 +34,12 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : "Unable to create Shopify checkout.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+function getCookie(cookieHeader: string, name: string) {
+  return cookieHeader
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
 }

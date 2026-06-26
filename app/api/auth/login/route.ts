@@ -10,11 +10,18 @@ import {
 } from "@/lib/customerAccount";
 
 const isProduction = process.env.NODE_ENV === "production";
+const OAUTH_RETURN_TO_COOKIE = "don_perro_oauth_return_to";
+
+function getSafeReturnTo(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/account?authenticated=1";
+  return value;
+}
 
 export async function GET(request: Request) {
   try {
     const requestUrl = new URL(request.url);
     const loginHint = requestUrl.searchParams.get("login_hint")?.trim();
+    const returnTo = getSafeReturnTo(requestUrl.searchParams.get("return_to"));
     const { domain, clientId, redirectUri } = getCustomerAccountConfig();
     const discovery = await getOpenIdConfiguration(domain);
     const state = randomToken();
@@ -50,6 +57,7 @@ export async function GET(request: Request) {
     response.cookies.set(OAUTH_STATE_COOKIE, state, cookieOptions);
     response.cookies.set(OAUTH_NONCE_COOKIE, nonce, cookieOptions);
     response.cookies.set(OAUTH_VERIFIER_COOKIE, verifier, cookieOptions);
+    response.cookies.set(OAUTH_RETURN_TO_COOKIE, returnTo, cookieOptions);
     response.cookies.delete("don_perro_customer_access");
     response.cookies.delete("don_perro_customer_refresh");
     response.cookies.delete("don_perro_customer_expires");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { Star, Check, ArrowRight, Loader2 } from "lucide-react";
@@ -11,6 +12,7 @@ type AuthMode = "login" | "register";
 type PetPref = "dog" | "cat" | "multiple" | null;
 
 export default function AuthForm() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>("login");
   const [petPref, setPetPref] = useState<PetPref>(null);
   const [loading, setLoading] = useState(false);
@@ -38,8 +40,12 @@ export default function AuthForm() {
   const startShopifyLogin = (email: string) => {
     clearAuthSession();
     const loginUrl = new URL("/api/auth/login", window.location.origin);
+    const returnTo = searchParams.get("returnTo");
     if (email) {
       loginUrl.searchParams.set("login_hint", email);
+    }
+    if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
+      loginUrl.searchParams.set("return_to", returnTo);
     }
     window.location.href = loginUrl.toString();
   };

@@ -206,8 +206,21 @@ export default function CartView({ initialProducts }: CartViewProps) {
   };
 
   // Checkout sequence navigation
-  const handleProceedToCheckout = () => {
-    router.push("/checkout");
+  const handleProceedToCheckout = async () => {
+    try {
+      const response = await fetch("/api/auth/me", { cache: "no-store" });
+      const payload = response.ok ? await response.json() : null;
+
+      if (!payload?.authenticated) {
+        router.push("/login?returnTo=/checkout");
+        return;
+      }
+
+      router.push("/checkout");
+    } catch (error) {
+      console.error(error);
+      router.push("/login?returnTo=/checkout");
+    }
   };
 
   // Calculate prices

@@ -11,6 +11,12 @@ import {
 } from "@/lib/customerAccount";
 
 const isProduction = process.env.NODE_ENV === "production";
+const OAUTH_RETURN_TO_COOKIE = "don_perro_oauth_return_to";
+
+function getSafeReturnTo(value: string | undefined) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/account?authenticated=1";
+  return value;
+}
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -33,7 +39,8 @@ export async function GET(request: Request) {
     }
 
     const token = await exchangeCustomerAuthorizationCode(code, verifier);
-    const response = NextResponse.redirect(new URL("/account?authenticated=1", request.url));
+    const returnTo = getSafeReturnTo(cookies[OAUTH_RETURN_TO_COOKIE]);
+    const response = NextResponse.redirect(new URL(returnTo, request.url));
     const baseCookieOptions = {
       httpOnly: true,
       sameSite: "lax" as const,
@@ -68,6 +75,7 @@ export async function GET(request: Request) {
     response.cookies.delete(OAUTH_STATE_COOKIE);
     response.cookies.delete(OAUTH_VERIFIER_COOKIE);
     response.cookies.delete(OAUTH_NONCE_COOKIE);
+    response.cookies.delete(OAUTH_RETURN_TO_COOKIE);
 
     return response;
   } catch (caughtError) {
