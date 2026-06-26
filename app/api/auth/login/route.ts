@@ -32,6 +32,7 @@ export async function GET(request: Request) {
     authorizationUrl.searchParams.set("code_challenge", challenge);
     authorizationUrl.searchParams.set("code_challenge_method", "S256");
     authorizationUrl.searchParams.set("prompt", "login");
+    authorizationUrl.searchParams.set("max_age", "0");
 
     if (loginHint) {
       authorizationUrl.searchParams.set("login_hint", loginHint);

@@ -38,10 +38,14 @@ async function createShopifyLogoutRedirect(request: Request) {
     const { domain } = getCustomerAccountConfig();
     const discovery = await getOpenIdConfiguration(domain);
     const returnUrl = new URL("/login", request.url);
+    const idToken = getCookie(request.headers.get("cookie") || "", CUSTOMER_ID_TOKEN_COOKIE);
 
     if (discovery.end_session_endpoint) {
       const logoutUrl = new URL(discovery.end_session_endpoint);
       logoutUrl.searchParams.set("post_logout_redirect_uri", returnUrl.toString());
+      if (idToken) {
+        logoutUrl.searchParams.set("id_token_hint", idToken);
+      }
       return NextResponse.redirect(logoutUrl);
     }
 
@@ -50,4 +54,12 @@ async function createShopifyLogoutRedirect(request: Request) {
     console.error(error);
     return NextResponse.redirect(new URL("/login", request.url));
   }
+}
+
+function getCookie(cookieHeader: string, name: string) {
+  return cookieHeader
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
 }
