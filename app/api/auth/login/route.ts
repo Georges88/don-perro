@@ -31,6 +31,7 @@ export async function GET(request: Request) {
     authorizationUrl.searchParams.set("nonce", nonce);
     authorizationUrl.searchParams.set("code_challenge", challenge);
     authorizationUrl.searchParams.set("code_challenge_method", "S256");
+    authorizationUrl.searchParams.set("prompt", "login");
 
     if (loginHint) {
       authorizationUrl.searchParams.set("login_hint", loginHint);
@@ -48,6 +49,10 @@ export async function GET(request: Request) {
     response.cookies.set(OAUTH_STATE_COOKIE, state, cookieOptions);
     response.cookies.set(OAUTH_NONCE_COOKIE, nonce, cookieOptions);
     response.cookies.set(OAUTH_VERIFIER_COOKIE, verifier, cookieOptions);
+    response.cookies.delete("don_perro_customer_access");
+    response.cookies.delete("don_perro_customer_refresh");
+    response.cookies.delete("don_perro_customer_expires");
+    response.cookies.delete("don_perro_customer_id");
 
     return response;
   } catch (error) {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { Star, Check, ArrowRight, Loader2 } from "lucide-react";
 import FormNotice from "@/components/ui/FormNotice";
+import { clearAuthSession } from "@/lib/auth";
 
 type AuthMode = "login" | "register";
 type PetPref = "dog" | "cat" | "multiple" | null;
@@ -35,6 +36,7 @@ export default function AuthForm() {
   };
 
   const startShopifyLogin = (email: string) => {
+    clearAuthSession();
     const loginUrl = new URL("/api/auth/login", window.location.origin);
     if (email) {
       loginUrl.searchParams.set("login_hint", email);

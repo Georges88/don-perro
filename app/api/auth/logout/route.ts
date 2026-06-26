@@ -4,10 +4,26 @@ import {
   CUSTOMER_EXPIRES_COOKIE,
   CUSTOMER_ID_TOKEN_COOKIE,
   CUSTOMER_REFRESH_COOKIE,
+  getCustomerAccountConfig,
+  getOpenIdConfiguration,
 } from "@/lib/customerAccount";
 
-export async function POST() {
-  const response = NextResponse.json({ ok: true });
+export async function GET(request: Request) {
+  return clearCustomerSession(request, true);
+}
+
+export async function POST(request: Request) {
+  return clearCustomerSession(request, false);
+}
+
+async function clearCustomerSession(request: Request, redirectToShopify: boolean) {
+  let response: NextResponse;
+
+  if (redirectToShopify) {
+    response = await createShopifyLogoutRedirect(request);
+  } else {
+    response = NextResponse.json({ ok: true });
+  }
 
   response.cookies.delete(CUSTOMER_ACCESS_COOKIE);
   response.cookies.delete(CUSTOMER_REFRESH_COOKIE);
@@ -15,4 +31,23 @@ export async function POST() {
   response.cookies.delete(CUSTOMER_ID_TOKEN_COOKIE);
 
   return response;
+}
+
+async function createShopifyLogoutRedirect(request: Request) {
+  try {
+    const { domain } = getCustomerAccountConfig();
+    const discovery = await getOpenIdConfiguration(domain);
+    const returnUrl = new URL("/login", request.url);
+
+    if (discovery.end_session_endpoint) {
+      const logoutUrl = new URL(discovery.end_session_endpoint);
+      logoutUrl.searchParams.set("post_logout_redirect_uri", returnUrl.toString());
+      return NextResponse.redirect(logoutUrl);
+    }
+
+    return NextResponse.redirect(returnUrl);
+  } catch (error) {
+    console.error(error);
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 }

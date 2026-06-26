@@ -571,10 +571,11 @@ export default function AccountPage() {
 
             <button
               onClick={() => {
-                fetch("/api/auth/logout", { method: "POST" }).catch(console.error);
                 clearAuthSession();
                 showToast("Logging out from account...");
-                setTimeout(() => router.push("/login"), 800);
+                setTimeout(() => {
+                  window.location.href = "/api/auth/logout";
+                }, 500);
               }}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-error hover:bg-error-container/20 font-bold transition-all w-full text-left cursor-pointer select-none outline-none mt-auto"
             >
