@@ -27,6 +27,8 @@ import {
 } from "lucide-react";
 import FormNotice from "@/components/ui/FormNotice";
 import { AuthUser, clearAuthSession, getCurrentUser, setCurrentUser } from "@/lib/auth";
+import { getWishlist, setWishlist } from "@/lib/wishlist";
+import { Product } from "@/types/shopify";
 
 // Types
 type TabType = "profile" | "addresses" | "orders" | "wishlist";
@@ -43,6 +45,19 @@ interface Address {
   zip: string;
   phone: string;
 }
+
+const ADDRESS_STORAGE_KEY = "don_perro_addresses";
+
+const emptyAddressForm: Omit<Address, "id"> = {
+  name: "",
+  isDefault: false,
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  state: "",
+  zip: "",
+  phone: ""
+};
 
 interface TrackingStep {
   title: string;
@@ -72,6 +87,16 @@ interface Order {
   cancelReason?: string;
   trackingSteps?: TrackingStep[];
   details?: OrderDetails;
+  lineItems?: OrderLineItem[];
+}
+
+interface OrderLineItem {
+  title: string;
+  quantity: number;
+  merchandiseId: string;
+  variantTitle: string;
+  price: string;
+  imageUrl: string;
 }
 
 interface ShopifyAccountOrder {
@@ -83,6 +108,7 @@ interface ShopifyAccountOrder {
   itemCount: number;
   title: string;
   imageUrl: string;
+  lineItems: OrderLineItem[];
 }
 
 export default function AccountPage() {
@@ -109,40 +135,9 @@ export default function AccountPage() {
   const [ordersError, setOrdersError] = useState<string | null>(null);
 
   // Address State
-  const [addresses, setAddresses] = useState<Address[]>([
-    {
-      id: "addr_1",
-      name: "Mateo Alvarez (Default)",
-      isDefault: true,
-      addressLine1: "1248 Sagamore Terrace",
-      addressLine2: "Suite B",
-      city: "Los Angeles",
-      state: "CA",
-      zip: "90025",
-      phone: "+1 (555) 382-9901"
-    },
-    {
-      id: "addr_2",
-      name: "Olivia C. Alvarez (Office)",
-      isDefault: false,
-      addressLine1: "502 Ocean Boulevard",
-      city: "Santa Monica",
-      state: "CA",
-      zip: "90401",
-      phone: "+1 (555) 129-4830"
-    }
-  ]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
-  const [newAddress, setNewAddress] = useState<Omit<Address, "id">>({
-    name: "",
-    isDefault: false,
-    addressLine1: "",
-    addressLine2: "",
-    city: "",
-    state: "",
-    zip: "",
-    phone: ""
-  });
+  const [newAddress, setNewAddress] = useState<Omit<Address, "id">>(emptyAddressForm);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
 
   // Profile Form State
@@ -191,23 +186,36 @@ export default function AccountPage() {
     loadCustomer();
   }, []);
 
-  // Wishlist state
-  const [wishlistItems, setWishlistItems] = useState([
-    {
-      id: "wish_1",
-      title: "Artisanal Beef Liver Bites",
-      category: "Nutrition",
-      price: "$24.00",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAm5QB1jVE4kMaNzKFCFaRvuGMoU9pF2BZXtXpQt2D7slejf1WsPhP_WrJwkkYhqomOtXG7FrfcTizqiZI5xefgNxdunjeRj_rJ9OywqrNXieV9LsNhbqbUSbSitYZhsBWWJMtjXO6Fl7vYi7u2qaPh8PVRPglGo38Fatlz2_3lZ--IA6KqB4jXpX5ISemJD5DMiU-0fSbnHsoPBIDqU49SWljQCoEx8Pnja9H3P91EN_zApHF7_CM5Vex61xh6MfkAl4c2errOTyU"
-    },
-    {
-      id: "wish_2",
-      title: "Ergonomic Ceramic Bowl",
-      category: "Accessories",
-      price: "$28.00",
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuA44SC1pTLHqxOppzpo41ZbeY8yK9f0CoWwakQXzmj-Dhgg1XkdfJnrSCXhl9GGTtBjccwoQ2z5uw6hV8bZbIG2INkm8VQfmluh0JucwBn5XaGFNVw6rarrJWvYj5WjQWrpI1PfqtFRzCKZp-0yURKUKBqMpqkjT7YCeg1zTwjxdL85Uvc7BBr3UY-C_Nie9S0pzvZE4AMMTF3XLic3U47Aju7E8f0pzxSP1yTaKrtYlNGBmfo5Z3FL2emwW9Vuep28_EEIa3ZyjbY"
+  useEffect(() => {
+    try {
+      const storedAddresses = localStorage.getItem(ADDRESS_STORAGE_KEY);
+      if (!storedAddresses) return;
+
+      const parsed = JSON.parse(storedAddresses);
+      setAddresses(Array.isArray(parsed) ? parsed : []);
+    } catch (error) {
+      console.error("Failed to load saved addresses", error);
+      setAddresses([]);
     }
-  ]);
+  }, []);
+
+  // Wishlist state
+  const [wishlistItems, setWishlistItems] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const syncWishlist = () => {
+      setWishlistItems(getWishlist());
+    };
+
+    syncWishlist();
+    window.addEventListener("wishlist-updated", syncWishlist);
+    window.addEventListener("storage", syncWishlist);
+
+    return () => {
+      window.removeEventListener("wishlist-updated", syncWishlist);
+      window.removeEventListener("storage", syncWishlist);
+    };
+  }, []);
 
   // Order Details expanded state
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
@@ -340,7 +348,9 @@ export default function AccountPage() {
   };
 
   const handleDeleteAddress = (id: string) => {
-    setAddresses(addresses.filter(addr => addr.id !== id));
+    const updated = addresses.filter(addr => addr.id !== id);
+    setAddresses(updated);
+    localStorage.setItem(ADDRESS_STORAGE_KEY, JSON.stringify(updated));
     showToast("Saved address deleted.");
   };
 
@@ -360,33 +370,116 @@ export default function AccountPage() {
       name: newAddress.name || `${firstName} ${lastName}`
     };
 
-    if (newAddress.isDefault) {
-      setAddresses(addresses.map(addr => ({ ...addr, isDefault: false })).concat(formattedAddress));
-    } else {
-      setAddresses([...addresses, formattedAddress]);
-    }
+    const updatedAddresses = newAddress.isDefault
+      ? addresses.map(addr => ({ ...addr, isDefault: false })).concat(formattedAddress)
+      : [...addresses, formattedAddress];
+
+    setAddresses(updatedAddresses);
+    localStorage.setItem(ADDRESS_STORAGE_KEY, JSON.stringify(updatedAddresses));
 
     setIsAddingAddress(false);
-    setNewAddress({
-      name: "",
-      isDefault: false,
-      addressLine1: "",
-      addressLine2: "",
-      city: "",
-      state: "",
-      zip: "",
-      phone: ""
-    });
+    setNewAddress(emptyAddressForm);
     showToast("Premium address added successfully!");
   };
 
   const handleRemoveFromWishlist = (id: string) => {
-    setWishlistItems(wishlistItems.filter(item => item.id !== id));
-    showToast("Item removed from your boutique wishlist.");
+    const updated = wishlistItems.filter(item => item.id !== id);
+    if (setWishlist(updated)) {
+      setWishlistItems(updated);
+      showToast("Item removed from your boutique wishlist.");
+    }
   };
 
-  const handleAddToCart = (productName: string) => {
-    showToast(`Added "${productName}" to shopping cart! 🛒`);
+  const handleWishlistAddToCart = (product: Product) => {
+    const firstVariant = product.variants?.[0];
+    const selectedVariantId = firstVariant?.id || `var_${product.id}_1`;
+    const selectedVariantTitle = firstVariant?.title || "Standard";
+
+    let currentCart: Array<{
+      product: Product;
+      quantity: number;
+      selectedVariantId: string;
+      selectedVariantTitle: string;
+    }> = [];
+
+    try {
+      const savedCart = localStorage.getItem("don_perro_cart");
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart);
+        currentCart = Array.isArray(parsed) ? parsed : [];
+      }
+    } catch {
+      currentCart = [];
+    }
+
+    const existingIndex = currentCart.findIndex(
+      item => item.product.id === product.id && item.selectedVariantId === selectedVariantId
+    );
+
+    if (existingIndex > -1) {
+      currentCart[existingIndex].quantity += 1;
+    } else {
+      currentCart.push({
+        product,
+        quantity: 1,
+        selectedVariantId,
+        selectedVariantTitle,
+      });
+    }
+
+    localStorage.setItem("don_perro_cart", JSON.stringify(currentCart));
+    window.dispatchEvent(new Event("cart-updated"));
+    showToast(`Added "${product.title}" to shopping cart!`);
+  };
+
+  const handleAddToCart = (productName: string, lineItems?: OrderLineItem[]) => {
+    if (!lineItems?.length) {
+      showToast(`Added "${productName}" to shopping cart!`);
+      return;
+    }
+
+    const cartItems = lineItems.map((item) => ({
+      product: {
+        id: item.merchandiseId,
+        title: item.title,
+        handle: item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+        description: "",
+        vendor: "Don Perro",
+        productType: "Reorder",
+        tags: [],
+        featuredImage: {
+          url: item.imageUrl,
+          altText: item.title,
+        },
+        images: [{
+          url: item.imageUrl,
+          altText: item.title,
+        }],
+        priceRange: {
+          minVariantPrice: {
+            amount: item.price.replace(/[^0-9.]/g, "") || "0",
+            currencyCode: "USD",
+          },
+        },
+        variants: [{
+          id: item.merchandiseId,
+          title: item.variantTitle,
+          availableForSale: true,
+          price: {
+            amount: item.price.replace(/[^0-9.]/g, "") || "0",
+            currencyCode: "USD",
+          },
+        }],
+      },
+      quantity: item.quantity,
+      selectedVariantId: item.merchandiseId,
+      selectedVariantTitle: item.variantTitle,
+    }));
+
+    localStorage.setItem("don_perro_cart", JSON.stringify(cartItems));
+    window.dispatchEvent(new Event("cart-updated"));
+    showToast(`Added ${lineItems.length} ${lineItems.length === 1 ? "item" : "items"} from "${productName}" to your cart.`);
+    setTimeout(() => router.push("/cart"), 600);
   };
 
   const handleReviewSubmit = (e: React.FormEvent) => {
@@ -414,16 +507,17 @@ export default function AccountPage() {
       status,
       imageUrl: order.imageUrl,
       badgeColor: getOrderBadgeColor(status),
+      lineItems: order.lineItems,
     };
   };
 
   const formatOrderStatus = (fulfillmentStatus: string, financialStatus: string) => {
-    const normalizedFulfillment = fulfillmentStatus.toLowerCase();
-    const normalizedFinancial = financialStatus.toLowerCase();
+    const normalizedFulfillment = fulfillmentStatus.trim().toUpperCase();
+    const normalizedFinancial = financialStatus.trim().toUpperCase();
 
-    if (normalizedFulfillment.includes("fulfilled") || normalizedFulfillment.includes("delivered")) return "Delivered";
-    if (normalizedFulfillment.includes("in_progress") || normalizedFulfillment.includes("partial")) return "Shipped";
-    if (normalizedFinancial.includes("voided") || normalizedFinancial.includes("refunded")) return "Cancelled";
+    if (["FULFILLED", "DELIVERED"].includes(normalizedFulfillment)) return "Delivered";
+    if (["IN_PROGRESS", "PARTIALLY_FULFILLED", "ON_HOLD"].includes(normalizedFulfillment)) return "Shipped";
+    if (["VOIDED", "REFUNDED", "PARTIALLY_REFUNDED"].includes(normalizedFinancial)) return "Cancelled";
     return "Processing";
   };
 
@@ -746,7 +840,7 @@ export default function AccountPage() {
                               {order.status === "Delivered" && (
                                 <>
                                   <button
-                                    onClick={() => handleAddToCart(order.title)}
+                                    onClick={() => handleAddToCart(order.title, order.lineItems)}
                                     className="px-5 py-2 rounded-full bg-primary text-on-primary font-bold text-xs shadow-md shadow-primary/10 hover:shadow-lg active:scale-95 transition-all outline-none cursor-pointer"
                                   >
                                     Buy It Again
@@ -861,24 +955,8 @@ export default function AccountPage() {
                 <div className="border-b border-outline-variant/20 pb-4">
                   <h2 className="text-3xl font-extrabold font-heading text-on-surface tracking-tight">Profile Details</h2>
                   <p className="text-sm text-on-surface-variant font-medium mt-1">
-                    Manage your personal configurations, luxury memberships, and security parameters.
+                    Manage your personal details and security parameters.
                   </p>
-                </div>
-
-                {/* Membership tier info card */}
-                <div className="bg-gradient-to-tr from-primary-container/20 to-primary-fixed-dim/10 border border-primary/20 rounded-2xl p-5 md:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary font-bold text-[28px]">stars</span>
-                      <span className="text-sm font-black text-primary tracking-widest uppercase">Premium Gold Member</span>
-                    </div>
-                    <p className="text-xs font-semibold text-secondary/90">
-                      You are enjoying free premium express shipping and extra boutique loyalty points.
-                    </p>
-                  </div>
-                  <div className="bg-primary hover:bg-primary-tint text-on-primary text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full cursor-not-allowed select-none transition-colors">
-                    Level 3 Premium tier
-                  </div>
                 </div>
 
                 <form onSubmit={handleUpdateProfile} noValidate className="bg-white border border-outline-variant/60 rounded-2xl p-6 space-y-4">
@@ -1126,47 +1204,64 @@ export default function AccountPage() {
                       animate={{ opacity: 1 }}
                       className="grid grid-cols-1 md:grid-cols-2 gap-4"
                     >
-                      {addresses.map((addr) => (
-                        <div
-                          key={addr.id}
-                          className="bg-white border border-outline-variant/60 rounded-2xl p-5 hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between"
-                        >
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-start gap-2">
-                              <h4 className="font-bold text-on-surface font-sans text-sm tracking-wide">
-                                {addr.name}
-                              </h4>
-                              {addr.isDefault && (
-                                <span className="bg-primary-container text-on-primary-container font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full select-none leading-none">
-                                  Default Shipping
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-secondary space-y-0.5 font-medium leading-relaxed">
-                              <p>{addr.addressLine1}</p>
-                              {addr.addressLine2 && <p>{addr.addressLine2}</p>}
-                              <p>{addr.city}, {addr.state} {addr.zip}</p>
-                              <p className="mt-2 text-[11px] font-mono text-secondary/70">Phone: {addr.phone}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 pt-4 border-t border-outline-variant/20 mt-4 text-xs font-bold text-secondary">
-                            <button
-                              onClick={() => showToast("Edit capability is active on Shopify integration rollout.")}
-                              className="hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" /> Edit
-                            </button>
-                            <div className="w-1.5 h-1.5 rounded-full bg-outline-variant/50" />
-                            <button
-                              onClick={() => handleDeleteAddress(addr.id)}
-                              className="hover:text-error transition-colors flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Delete
-                            </button>
-                          </div>
+                      {addresses.length === 0 ? (
+                        <div className="md:col-span-2 text-center bg-white border border-outline-variant/50 rounded-2xl py-12 px-4 space-y-3">
+                          <MapPin className="w-10 h-10 text-secondary/40 mx-auto" />
+                          <p className="text-sm font-bold text-on-surface font-sans">No saved addresses</p>
+                          <p className="text-xs text-secondary leading-normal max-w-sm mx-auto">
+                            Add a shipping address to keep it ready for future orders.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingAddress(true)}
+                            className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-primary text-on-primary font-bold text-xs hover:opacity-95 shadow-md active:scale-95 transition-all mt-2"
+                          >
+                            <Plus className="w-4 h-4" /> Add Address
+                          </button>
                         </div>
-                      ))}
+                      ) : (
+                        addresses.map((addr) => (
+                          <div
+                            key={addr.id}
+                            className="bg-white border border-outline-variant/60 rounded-2xl p-5 hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between"
+                          >
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-start gap-2">
+                                <h4 className="font-bold text-on-surface font-sans text-sm tracking-wide">
+                                  {addr.name}
+                                </h4>
+                                {addr.isDefault && (
+                                  <span className="bg-primary-container text-on-primary-container font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full select-none leading-none">
+                                    Default Shipping
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-secondary space-y-0.5 font-medium leading-relaxed">
+                                <p>{addr.addressLine1}</p>
+                                {addr.addressLine2 && <p>{addr.addressLine2}</p>}
+                                <p>{addr.city}, {addr.state} {addr.zip}</p>
+                                <p className="mt-2 text-[11px] font-mono text-secondary/70">Phone: {addr.phone}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-4 border-t border-outline-variant/20 mt-4 text-xs font-bold text-secondary">
+                              <button
+                                onClick={() => showToast("Edit capability is active on Shopify integration rollout.")}
+                                className="hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" /> Edit
+                              </button>
+                              <div className="w-1.5 h-1.5 rounded-full bg-outline-variant/50" />
+                              <button
+                                onClick={() => handleDeleteAddress(addr.id)}
+                                className="hover:text-error transition-colors flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -1213,8 +1308,8 @@ export default function AccountPage() {
                       >
                         <div className="relative aspect-square w-full font-sans bg-surface overflow-hidden">
                           <img
-                            src={item.image}
-                            alt={item.title}
+                            src={item.featuredImage.url}
+                            alt={item.featuredImage.altText || item.title}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                           <button
@@ -1229,7 +1324,7 @@ export default function AccountPage() {
                         <div className="p-4 space-y-1 flex-grow flex flex-col justify-between">
                           <div>
                             <span className="text-[10px] font-bold text-primary tracking-widest uppercase">
-                              {item.category}
+                              {item.productType}
                             </span>
                             <h4 className="font-bold text-on-surface text-sm line-clamp-1 mt-0.5 leading-snug">
                               {item.title}
@@ -1237,9 +1332,11 @@ export default function AccountPage() {
                           </div>
 
                           <div className="flex items-center justify-between pt-3 mt-4 border-t border-outline-variant/10">
-                            <span className="font-extrabold text-primary text-sm leading-none">{item.price}</span>
+                            <span className="font-extrabold text-primary text-sm leading-none">
+                              ${parseFloat(item.priceRange.minVariantPrice.amount).toFixed(2)}
+                            </span>
                             <button
-                              onClick={() => handleAddToCart(item.title)}
+                              onClick={() => handleWishlistAddToCart(item)}
                               className="px-4 py-1.5 rounded-full bg-primary text-on-primary font-bold text-[11px] hover:shadow transition-shadow cursor-pointer select-none leading-none flex items-center gap-1"
                             >
                               Add to Cart

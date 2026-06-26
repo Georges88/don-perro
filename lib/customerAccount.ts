@@ -18,6 +18,16 @@ export interface CustomerAccountOrder {
   itemCount: number;
   title: string;
   imageUrl: string;
+  lineItems: CustomerAccountOrderLineItem[];
+}
+
+export interface CustomerAccountOrderLineItem {
+  title: string;
+  quantity: number;
+  merchandiseId: string;
+  variantTitle: string;
+  price: string;
+  imageUrl: string;
 }
 
 interface OpenIdConfiguration {
@@ -69,8 +79,29 @@ interface CustomerOrdersQueryResponse {
           nodes: Array<{
             title?: string | null;
             quantity?: number | null;
+            price?: {
+              amount: string;
+              currencyCode: string;
+            } | null;
             image?: {
               url?: string | null;
+            } | null;
+            merchandise?: {
+              id?: string | null;
+              title?: string | null;
+              product?: {
+                id: string;
+                title: string;
+                handle: string;
+                description: string;
+                vendor: string;
+                productType: string;
+                tags: string[];
+                featuredImage?: {
+                  url?: string | null;
+                  altText?: string | null;
+                } | null;
+              };
             } | null;
           }>;
         } | null;
@@ -226,8 +257,32 @@ export async function getCustomerAccountOrders(accessToken: string): Promise<Cus
               nodes {
                 title
                 quantity
+                price {
+                  amount
+                  currencyCode
+                }
                 image {
                   url
+                }
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                    availableForSale
+                    product {
+                      id
+                      title
+                      handle
+                      description
+                      vendor
+                      productType
+                      tags
+                      featuredImage {
+                        url
+                        altText
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -268,6 +323,20 @@ export async function getCustomerAccountOrders(accessToken: string): Promise<Cus
       itemCount,
       title: firstItem?.title || "Don Perro order",
       imageUrl: firstItem?.image?.url || "/images/product-placeholder.svg",
+      lineItems: lineItems.map((item) => {
+        const merchandise = "merchandise" in item ? item.merchandise : null;
+        const product = merchandise && "product" in merchandise ? merchandise.product : null;
+        const imageUrl = item.image?.url || product?.featuredImage?.url || "/images/product-placeholder.svg";
+
+        return {
+          title: item.title || product?.title || "Don Perro product",
+          quantity: item.quantity || 1,
+          merchandiseId: merchandise && "id" in merchandise ? merchandise.id : "",
+          variantTitle: merchandise && "title" in merchandise ? merchandise.title : "Default",
+          price: formatMoney(item.price?.amount, item.price?.currencyCode),
+          imageUrl,
+        };
+      }).filter((item) => item.merchandiseId),
     };
   });
 }

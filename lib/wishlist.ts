@@ -44,6 +44,19 @@ export function toggleWishlist(product: Product): boolean {
   }
 }
 
+// Replace saved wishlist and notify all wishlist consumers.
+export function setWishlist(products: Product[]): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    localStorage.setItem("don_perro_wishlist", JSON.stringify(products));
+    window.dispatchEvent(new Event("wishlist-updated"));
+    return true;
+  } catch (e) {
+    console.error("Failed to save wishlist", e);
+    return false;
+  }
+}
+
 // Clear every saved product and notify all wishlist consumers.
 export function clearWishlist(): boolean {
   if (typeof window === "undefined") return false;
