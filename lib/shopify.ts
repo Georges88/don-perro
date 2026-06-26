@@ -79,7 +79,7 @@ interface CatalogResponse {
 
 interface GraphQLResponse<T> {
   data?: T;
-  errors?: Array<{ message: string }>;
+  errors?: unknown;
 }
 
 function getShopifyConfig() {
@@ -107,12 +107,42 @@ async function shopifyFetch<T>(query: string): Promise<T> {
   });
 
   const payload = await response.json() as GraphQLResponse<T>;
-  if (!response.ok || payload.errors?.length || !payload.data) {
-    const details = payload.errors?.map((error) => error.message).join("; ") || response.statusText;
+  if (!response.ok || hasShopifyErrors(payload.errors) || !payload.data) {
+    const details = formatShopifyErrors(payload.errors) || response.statusText;
     throw new Error(`Shopify Storefront API request failed: ${details}`);
   }
 
   return payload.data;
+}
+
+function formatShopifyErrors(errors: unknown) {
+  if (!errors) return "";
+
+  if (Array.isArray(errors)) {
+    return errors
+      .map((error) => {
+        if (typeof error === "string") return error;
+        if (error && typeof error === "object" && "message" in error) {
+          return String(error.message);
+        }
+        return JSON.stringify(error);
+      })
+      .join("; ");
+  }
+
+  if (typeof errors === "string") return errors;
+
+  if (typeof errors === "object" && "message" in errors) {
+    return String(errors.message);
+  }
+
+  return JSON.stringify(errors);
+}
+
+function hasShopifyErrors(errors: unknown) {
+  if (!errors) return false;
+  if (Array.isArray(errors)) return errors.length > 0;
+  return true;
 }
 
 async function getCatalog(): Promise<CatalogResponse> {

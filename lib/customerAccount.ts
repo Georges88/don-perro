@@ -27,7 +27,7 @@ interface TokenResponse {
 
 interface GraphQLResponse<T> {
   data?: T;
-  errors?: Array<{ message: string }>;
+  errors?: unknown;
 }
 
 interface CustomerQueryResponse {
@@ -148,8 +148,8 @@ export async function getCustomerAccountUser(accessToken: string): Promise<Custo
   });
 
   const payload = (await response.json()) as GraphQLResponse<CustomerQueryResponse>;
-  if (!response.ok || payload.errors?.length || !payload.data?.customer) {
-    const details = payload.errors?.map((error) => error.message).join("; ") || response.statusText;
+  if (!response.ok || hasShopifyErrors(payload.errors) || !payload.data?.customer) {
+    const details = formatShopifyErrors(payload.errors) || response.statusText;
     throw new Error(`Unable to load Shopify customer account: ${details}`);
   }
 
@@ -168,4 +168,34 @@ export async function getCustomerAccountUser(accessToken: string): Promise<Custo
 
 function base64UrlEncode(value: Buffer) {
   return value.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+function formatShopifyErrors(errors: unknown) {
+  if (!errors) return "";
+
+  if (Array.isArray(errors)) {
+    return errors
+      .map((error) => {
+        if (typeof error === "string") return error;
+        if (error && typeof error === "object" && "message" in error) {
+          return String(error.message);
+        }
+        return JSON.stringify(error);
+      })
+      .join("; ");
+  }
+
+  if (typeof errors === "string") return errors;
+
+  if (typeof errors === "object" && "message" in errors) {
+    return String(errors.message);
+  }
+
+  return JSON.stringify(errors);
+}
+
+function hasShopifyErrors(errors: unknown) {
+  if (!errors) return false;
+  if (Array.isArray(errors)) return errors.length > 0;
+  return true;
 }

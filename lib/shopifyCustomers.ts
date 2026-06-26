@@ -28,7 +28,7 @@ interface CustomerCreateResponse {
 
 interface GraphQLResponse<T> {
   data?: T;
-  errors?: Array<{ message: string }>;
+  errors?: unknown;
 }
 
 const CUSTOMER_CREATE_MUTATION = `#graphql
@@ -89,13 +89,13 @@ export async function createShopifyCustomer(input: CreateShopifyCustomerInput): 
   });
 
   const payload = (await response.json()) as GraphQLResponse<CustomerCreateResponse>;
-  if (!response.ok || payload.errors?.length || !payload.data) {
-    const details = payload.errors?.map((error) => error.message).join("; ") || response.statusText;
+  if (!response.ok || hasShopifyErrors(payload.errors) || !payload.data) {
+    const details = formatShopifyErrors(payload.errors) || response.statusText;
     throw new Error(`Shopify customer creation failed: ${details}`);
   }
 
   const result = payload.data.customerCreate;
-  if (result.userErrors.length) {
+  if (Array.isArray(result.userErrors) && result.userErrors.length) {
     throw new Error(result.userErrors.map((error) => error.message).join(" "));
   }
 
@@ -104,4 +104,34 @@ export async function createShopifyCustomer(input: CreateShopifyCustomerInput): 
   }
 
   return result.customer;
+}
+
+function formatShopifyErrors(errors: unknown) {
+  if (!errors) return "";
+
+  if (Array.isArray(errors)) {
+    return errors
+      .map((error) => {
+        if (typeof error === "string") return error;
+        if (error && typeof error === "object" && "message" in error) {
+          return String(error.message);
+        }
+        return JSON.stringify(error);
+      })
+      .join("; ");
+  }
+
+  if (typeof errors === "string") return errors;
+
+  if (typeof errors === "object" && "message" in errors) {
+    return String(errors.message);
+  }
+
+  return JSON.stringify(errors);
+}
+
+function hasShopifyErrors(errors: unknown) {
+  if (!errors) return false;
+  if (Array.isArray(errors)) return errors.length > 0;
+  return true;
 }
