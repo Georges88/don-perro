@@ -41,6 +41,21 @@ const CATALOG_QUERY = `#graphql
   }
 `;
 
+const CART_CREATE_MUTATION = `#graphql
+  mutation CreateCart($input: CartInput!) {
+    cartCreate(input: $input) {
+      cart {
+        id
+        checkoutUrl
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
 interface ShopifyCatalogProduct {
   id: string;
   title: string;
@@ -77,6 +92,16 @@ interface CatalogResponse {
   collections: { nodes: ShopifyCatalogCollection[] };
 }
 
+interface CartCreateResponse {
+  cartCreate: {
+    cart: {
+      id: string;
+      checkoutUrl: string;
+    } | null;
+    userErrors: Array<{ field?: string[] | null; message: string }>;
+  };
+}
+
 interface GraphQLResponse<T> {
   data?: T;
   errors?: unknown;
@@ -94,7 +119,7 @@ function getShopifyConfig() {
   return { domain, token, version };
 }
 
-async function shopifyFetch<T>(query: string): Promise<T> {
+async function shopifyFetch<T>(query: string, variables?: Record<string, unknown>, revalidate = 60): Promise<T> {
   const { domain, token, version } = getShopifyConfig();
   const response = await fetch(`https://${domain}/api/${version}/graphql.json`, {
     method: "POST",
@@ -102,8 +127,8 @@ async function shopifyFetch<T>(query: string): Promise<T> {
       "Content-Type": "application/json",
       "X-Shopify-Storefront-Access-Token": token,
     },
-    body: JSON.stringify({ query }),
-    next: { revalidate: 60 },
+    body: JSON.stringify({ query, variables }),
+    next: { revalidate },
   });
 
   const payload = await response.json() as GraphQLResponse<T>;
@@ -147,6 +172,30 @@ function hasShopifyErrors(errors: unknown) {
 
 async function getCatalog(): Promise<CatalogResponse> {
   return shopifyFetch<CatalogResponse>(CATALOG_QUERY);
+}
+
+export async function createShopifyCart(lines: Array<{ merchandiseId: string; quantity: number }>, email?: string) {
+  const data = await shopifyFetch<CartCreateResponse>(
+    CART_CREATE_MUTATION,
+    {
+      input: {
+        lines,
+        ...(email ? { buyerIdentity: { email } } : {}),
+      },
+    },
+    0,
+  );
+  const result = data.cartCreate;
+
+  if (result.userErrors.length) {
+    throw new Error(result.userErrors.map((error) => error.message).join(" "));
+  }
+
+  if (!result.cart?.checkoutUrl) {
+    throw new Error("Shopify did not return a checkout URL.");
+  }
+
+  return result.cart;
 }
 
 function mapProduct(product: ShopifyCatalogProduct): Product {

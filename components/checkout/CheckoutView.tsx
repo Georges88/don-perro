@@ -65,6 +65,8 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
   // Order status
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [customerEmail, setCustomerEmail] = useState<string | null>(null);
 
   // Initialize checkout products from LocalStorage, or load the high-fidelity default mockup items
   useEffect(() => {
@@ -105,6 +107,17 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
     setCartItems(loadedItems);
     setMounted(true);
   }, [initialProducts]);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => {
+        if (payload?.authenticated && payload.user?.email) {
+          setCustomerEmail(payload.user.email);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   // Shipping validation
   const handleValidateShipping = () => {
@@ -169,50 +182,38 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
     setCardInfo({ ...cardInfo, expiry: formatted });
   };
 
-  // Finish checkout simulation
-  const handleCompletePurchase = () => {
+  // Send customer to Shopify checkout so completed purchases become real Shopify orders.
+  const handleCompletePurchase = async () => {
     setIsProcessing(true);
-    
-    // Save completed order information for the Order Confirmed page
-    const orderId = `DP-${Math.floor(10000 + Math.random() * 90000)}`;
-    const cardLast4 = cardInfo.number ? cardInfo.number.trim().slice(-4) : "4421";
-    
-    const lastOrder = {
-      orderId,
-      shippingInfo,
-      paymentType,
-      cardLast4,
-      items: cartItems.map(item => ({
-        product: {
-          id: item.product.id,
-          title: item.product.title,
-          handle: item.product.handle,
-          featuredImage: item.product.featuredImage,
-          variants: item.product.variants,
-          priceRange: item.product.priceRange
-        },
-        quantity: item.quantity,
-        selectedVariantId: item.selectedVariantId,
-        selectedVariantTitle: item.selectedVariantTitle,
-        selectedFormula: item.selectedFormula
-      })),
-      subtotal,
-      estimatedTax,
-      total
-    };
+    setCheckoutError(null);
 
-    setTimeout(() => {
-      try {
-        localStorage.setItem("don_perro_last_order", JSON.stringify(lastOrder));
-        localStorage.setItem("don_perro_cart", "[]");
-        window.dispatchEvent(new Event("cart-updated"));
-      } catch (err) {
-        console.error("Failed to save completed order info:", err);
+    try {
+      const response = await fetch("/api/checkout/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: customerEmail,
+          lines: cartItems.map((item) => ({
+            selectedVariantId: item.selectedVariantId,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.checkoutUrl) {
+        throw new Error(payload.error || "Unable to create Shopify checkout.");
       }
-      
+
+      localStorage.setItem("don_perro_cart", "[]");
+      window.dispatchEvent(new Event("cart-updated"));
+      window.location.href = payload.checkoutUrl;
+    } catch (error) {
       setIsProcessing(false);
-      router.push("/order-confirmed");
-    }, 2500);
+      setCheckoutError(error instanceof Error ? error.message : "Unable to create Shopify checkout.");
+    }
   };
 
   // calculations
@@ -663,6 +664,12 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
                           </div>
 
                           <div className="pt-4 text-left space-y-3">
+                            {checkoutError && (
+                              <div className="rounded-2xl border border-error/20 bg-error-container/20 px-4 py-3 text-xs font-semibold text-error flex items-start gap-2">
+                                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                <span>{checkoutError}</span>
+                              </div>
+                            )}
                             <button 
                               onClick={handleCompletePurchase}
                               className="w-full bg-primary hover:brightness-115 text-on-primary font-heading font-semibold text-sm py-4 rounded-full shadow-[0px_10px_30px_rgba(106,95,0,0.2)] hover:scale-[1.01] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
