@@ -239,7 +239,7 @@ export async function getCustomerAccountUser(accessToken: string): Promise<Custo
 export async function getCustomerAccountOrders(accessToken: string): Promise<CustomerAccountOrder[]> {
   const { domain } = getCustomerAccountConfig();
   const apiConfig = await getCustomerAccountApiConfiguration(domain);
-  const query = `#graphql
+  const detailedQuery = `#graphql
     query CurrentCustomerOrders {
       customer {
         orders(first: 20, sortKey: PROCESSED_AT, reverse: true) {
@@ -291,8 +291,38 @@ export async function getCustomerAccountOrders(accessToken: string): Promise<Cus
       }
     }
   `;
+  const minimalQuery = `#graphql
+    query CurrentCustomerOrdersFallback {
+      customer {
+        orders(first: 20, sortKey: PROCESSED_AT, reverse: true) {
+          nodes {
+            id
+            name
+            processedAt
+            fulfillmentStatus
+            financialStatus
+            totalPrice {
+              amount
+              currencyCode
+            }
+          }
+        }
+      }
+    }
+  `;
 
-  const response = await fetch(apiConfig.graphql_api, {
+  try {
+    const payload = await fetchCustomerAccountOrders(apiConfig.graphql_api, accessToken, detailedQuery);
+    return mapCustomerOrders(payload);
+  } catch (error) {
+    console.warn("Falling back to minimal Customer Account orders query", error);
+    const payload = await fetchCustomerAccountOrders(apiConfig.graphql_api, accessToken, minimalQuery);
+    return mapCustomerOrders(payload);
+  }
+}
+
+async function fetchCustomerAccountOrders(graphqlApi: string, accessToken: string, query: string) {
+  const response = await fetch(graphqlApi, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -307,6 +337,12 @@ export async function getCustomerAccountOrders(accessToken: string): Promise<Cus
     const details = formatShopifyErrors(payload.errors) || response.statusText;
     throw new Error(`Unable to load Shopify customer orders: ${details}`);
   }
+
+  return payload;
+}
+
+function mapCustomerOrders(payload: GraphQLResponse<CustomerOrdersQueryResponse>): CustomerAccountOrder[] {
+  if (!payload.data?.customer) return [];
 
   return payload.data.customer.orders.nodes.map((order) => {
     const lineItems = order.lineItems?.nodes || [];
