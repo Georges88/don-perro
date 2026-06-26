@@ -22,7 +22,8 @@ import {
   AlertCircle,
   Clock,
   ThumbsUp,
-  X
+  X,
+  Loader2
 } from "lucide-react";
 import FormNotice from "@/components/ui/FormNotice";
 import { AuthUser, clearAuthSession, getCurrentUser, setCurrentUser } from "@/lib/auth";
@@ -73,6 +74,17 @@ interface Order {
   details?: OrderDetails;
 }
 
+interface ShopifyAccountOrder {
+  id: string;
+  processedAt: string;
+  fulfillmentStatus: string;
+  financialStatus: string;
+  totalPrice: string;
+  itemCount: number;
+  title: string;
+  imageUrl: string;
+}
+
 export default function AccountPage() {
   const router = useRouter();
   const [authStatus, setAuthStatus] = useState<"checking" | "guest" | "authenticated">("checking");
@@ -92,6 +104,9 @@ export default function AccountPage() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [addressError, setAddressError] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
 
   // Address State
   const [addresses, setAddresses] = useState<Address[]>([
@@ -155,6 +170,7 @@ export default function AccountPage() {
         setLastName(currentUser.lastName);
         setEmail(currentUser.email);
         setAuthStatus("authenticated");
+        loadOrders();
       } catch (error) {
         console.error(error);
         const currentUser = getCurrentUser();
@@ -168,6 +184,7 @@ export default function AccountPage() {
         setLastName(currentUser.lastName);
         setEmail(currentUser.email);
         setAuthStatus("authenticated");
+        loadOrders();
       }
     };
 
@@ -285,13 +302,32 @@ export default function AccountPage() {
     }
   ];
 
-  const orders = hasLoadedOlderOrders ? [...baseOrders, ...olderOrders] : baseOrders;
-
   const showToast = (message: string) => {
     setToastMessage(message);
     setTimeout(() => {
       setToastMessage(null);
     }, 4000);
+  };
+
+  const loadOrders = async () => {
+    setOrdersLoading(true);
+    setOrdersError(null);
+
+    try {
+      const response = await fetch("/api/account/orders", { cache: "no-store" });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to load your orders.");
+      }
+
+      setOrders((payload.orders as ShopifyAccountOrder[]).map(mapShopifyOrder));
+    } catch (error) {
+      setOrdersError(error instanceof Error ? error.message : "Unable to load your orders.");
+      setOrders([]);
+    } finally {
+      setOrdersLoading(false);
+    }
   };
 
   const handleUpdateProfile = (e: React.FormEvent) => {
@@ -364,6 +400,52 @@ export default function AccountPage() {
       setReviewText("");
       showToast("Thank you! Your verified product review is being processed. Prime points gained! 🌟");
     }, 1500);
+  };
+
+  const mapShopifyOrder = (order: ShopifyAccountOrder): Order => {
+    const status = formatOrderStatus(order.fulfillmentStatus, order.financialStatus);
+
+    return {
+      id: order.id.replace(/^#/, ""),
+      title: order.title,
+      date: formatOrderDate(order.processedAt),
+      price: order.totalPrice,
+      itemCount: order.itemCount,
+      status,
+      imageUrl: order.imageUrl,
+      badgeColor: getOrderBadgeColor(status),
+    };
+  };
+
+  const formatOrderStatus = (fulfillmentStatus: string, financialStatus: string) => {
+    const normalizedFulfillment = fulfillmentStatus.toLowerCase();
+    const normalizedFinancial = financialStatus.toLowerCase();
+
+    if (normalizedFulfillment.includes("fulfilled") || normalizedFulfillment.includes("delivered")) return "Delivered";
+    if (normalizedFulfillment.includes("in_progress") || normalizedFulfillment.includes("partial")) return "Shipped";
+    if (normalizedFinancial.includes("voided") || normalizedFinancial.includes("refunded")) return "Cancelled";
+    return "Processing";
+  };
+
+  const getOrderBadgeColor = (status: string) => {
+    if (status === "Delivered") return "bg-secondary-container text-on-secondary-container";
+    if (status === "Shipped") return "bg-tertiary-fixed text-on-tertiary-fixed";
+    if (status === "Cancelled") return "bg-error-container text-on-error-container";
+    return "bg-primary-container text-on-primary-container";
+  };
+
+  const formatOrderDate = (date: string) => {
+    if (!date) return "Recently";
+
+    try {
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date(date));
+    } catch {
+      return date;
+    }
   };
 
   if (authStatus === "checking") {
@@ -559,6 +641,43 @@ export default function AccountPage() {
                 </div>
 
                 {/* Cards List */}
+                {ordersLoading ? (
+                  <div className="bg-white border border-outline-variant/60 rounded-2xl p-8 text-center shadow-sm">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
+                    <p className="text-sm font-bold text-on-surface mt-4">Loading your Shopify orders...</p>
+                    <p className="text-xs text-secondary font-medium mt-1">Fetching the latest order history for this customer account.</p>
+                  </div>
+                ) : ordersError ? (
+                  <div className="bg-error-container/20 border border-error/15 rounded-2xl p-6 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h3 className="text-sm font-black text-on-surface">Could not load orders</h3>
+                        <p className="text-xs text-secondary font-medium leading-relaxed mt-1">{ordersError}</p>
+                        <button
+                          onClick={loadOrders}
+                          className="mt-4 px-5 py-2 rounded-full bg-primary text-on-primary font-bold text-xs hover:shadow-md transition-all cursor-pointer"
+                        >
+                          Try Again
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div className="bg-white border border-outline-variant/60 rounded-2xl p-8 text-center shadow-sm">
+                    <Package className="w-9 h-9 text-primary mx-auto" />
+                    <h3 className="text-xl font-black font-heading text-on-surface mt-4">No orders yet</h3>
+                    <p className="text-sm text-secondary font-medium mt-2 max-w-md mx-auto">
+                      Orders placed through this Shopify customer account will appear here after checkout.
+                    </p>
+                    <Link
+                      href="/shop"
+                      className="inline-flex items-center justify-center mt-5 px-5 py-2.5 rounded-full bg-primary text-on-primary text-xs font-bold shadow-md"
+                    >
+                      Shop Now
+                    </Link>
+                  </div>
+                ) : (
                 <div className="space-y-4">
                   {orders.map((order) => {
                     const isOrderCancelled = order.status === "Cancelled";
@@ -711,24 +830,20 @@ export default function AccountPage() {
                     );
                   })}
                 </div>
+                )}
 
-                {/* View Older Orders Link Button */}
+                {/* Refresh Orders Link Button */}
+                {orders.length > 0 && !ordersLoading && !ordersError && (
                 <div className="pt-6 flex justify-center">
                   <button
-                    onClick={() => {
-                      if (hasLoadedOlderOrders) {
-                        showToast("All available orders are loaded.");
-                      } else {
-                        setHasLoadedOlderOrders(true);
-                        showToast("Loaded archive orders successfully! 📦");
-                      }
-                    }}
+                    onClick={loadOrders}
                     className="flex items-center gap-2 text-primary font-bold text-sm tracking-wide cursor-pointer hover:underline decoration-2 underline-offset-4 outline-none select-none transition-transform active:scale-95"
                   >
-                    <span>{hasLoadedOlderOrders ? "Show Less" : "View older orders"}</span>
-                    <ChevronDown className={`w-4 h-4 text-primary transition-transform duration-300 ${hasLoadedOlderOrders ? "rotate-180" : ""}`} />
+                    <span>Refresh orders</span>
+                    <ChevronDown className="w-4 h-4 text-primary -rotate-90" />
                   </button>
                 </div>
+                )}
               </motion.div>
             )}
 

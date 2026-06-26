@@ -8,6 +8,18 @@ export interface CustomerAccountUser {
   email: string;
 }
 
+export interface CustomerAccountOrder {
+  id: string;
+  name: string;
+  processedAt: string;
+  fulfillmentStatus: string;
+  financialStatus: string;
+  totalPrice: string;
+  itemCount: number;
+  title: string;
+  imageUrl: string;
+}
+
 interface OpenIdConfiguration {
   authorization_endpoint: string;
   token_endpoint: string;
@@ -37,6 +49,33 @@ interface CustomerQueryResponse {
     emailAddress?: {
       emailAddress?: string | null;
     } | null;
+  } | null;
+}
+
+interface CustomerOrdersQueryResponse {
+  customer: {
+    orders: {
+      nodes: Array<{
+        id: string;
+        name?: string | null;
+        processedAt?: string | null;
+        fulfillmentStatus?: string | null;
+        financialStatus?: string | null;
+        totalPrice?: {
+          amount: string;
+          currencyCode: string;
+        } | null;
+        lineItems?: {
+          nodes: Array<{
+            title?: string | null;
+            quantity?: number | null;
+            image?: {
+              url?: string | null;
+            } | null;
+          }>;
+        } | null;
+      }>;
+    };
   } | null;
 }
 
@@ -166,8 +205,88 @@ export async function getCustomerAccountUser(accessToken: string): Promise<Custo
   };
 }
 
+export async function getCustomerAccountOrders(accessToken: string): Promise<CustomerAccountOrder[]> {
+  const { domain } = getCustomerAccountConfig();
+  const apiConfig = await getCustomerAccountApiConfiguration(domain);
+  const query = `#graphql
+    query CurrentCustomerOrders {
+      customer {
+        orders(first: 20, sortKey: PROCESSED_AT, reverse: true) {
+          nodes {
+            id
+            name
+            processedAt
+            fulfillmentStatus
+            financialStatus
+            totalPrice {
+              amount
+              currencyCode
+            }
+            lineItems(first: 5) {
+              nodes {
+                title
+                quantity
+                image {
+                  url
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const response = await fetch(apiConfig.graphql_api, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: accessToken,
+    },
+    body: JSON.stringify({ query }),
+    cache: "no-store",
+  });
+
+  const payload = (await response.json()) as GraphQLResponse<CustomerOrdersQueryResponse>;
+  if (!response.ok || hasShopifyErrors(payload.errors) || !payload.data?.customer) {
+    const details = formatShopifyErrors(payload.errors) || response.statusText;
+    throw new Error(`Unable to load Shopify customer orders: ${details}`);
+  }
+
+  return payload.data.customer.orders.nodes.map((order) => {
+    const lineItems = order.lineItems?.nodes || [];
+    const firstItem = lineItems[0];
+    const itemCount = lineItems.reduce((total, item) => total + (item.quantity || 1), 0);
+
+    return {
+      id: order.name || order.id.split("/").pop() || order.id,
+      name: order.name || order.id,
+      processedAt: order.processedAt || "",
+      fulfillmentStatus: order.fulfillmentStatus || "UNFULFILLED",
+      financialStatus: order.financialStatus || "PENDING",
+      totalPrice: formatMoney(order.totalPrice?.amount, order.totalPrice?.currencyCode),
+      itemCount,
+      title: firstItem?.title || "Don Perro order",
+      imageUrl: firstItem?.image?.url || "/images/product-placeholder.svg",
+    };
+  });
+}
+
 function base64UrlEncode(value: Buffer) {
   return value.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+function formatMoney(amount?: string, currencyCode?: string) {
+  const numericAmount = Number(amount || 0);
+
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currencyCode || "USD",
+    }).format(numericAmount);
+  } catch {
+    return `${numericAmount.toFixed(2)} ${currencyCode || "USD"}`;
+  }
 }
 
 function formatShopifyErrors(errors: unknown) {
