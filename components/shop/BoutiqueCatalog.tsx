@@ -23,6 +23,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { Product } from "@/types/shopify";
 import { getWishlist, toggleWishlist } from "@/lib/wishlist";
+import { getDefaultVariant, getSelectedVariantAmount, hasVariantPriceRange } from "@/lib/pricing";
 
 interface BoutiqueCatalogProps {
   initialProducts: Product[];
@@ -52,7 +53,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState<boolean>(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
-  const [cartModalItem, setCartModalItem] = useState<{ product: Product; quantity: number } | null>(null);
+  const [cartModalItem, setCartModalItem] = useState<{ product: Product; quantity: number; selectedVariantId: string } | null>(null);
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -219,8 +220,9 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
       e.stopPropagation(); // Prevent opening quick view on card click
     }
 
-    const selectedVariantId = product.variants?.[0]?.id || `var_${product.id}_1`;
-    const selectedVariantTitle = product.variants?.[0]?.title || "Default Title";
+    const selectedVariant = getDefaultVariant(product);
+    const selectedVariantId = selectedVariant?.id || `var_${product.id}_1`;
+    const selectedVariantTitle = selectedVariant?.title || "Default Title";
 
     interface CartItem {
       product: Product;
@@ -265,7 +267,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
       console.error("Failed to save cart items:", err);
     }
 
-    setCartModalItem({ product, quantity: 1 });
+    setCartModalItem({ product, quantity: 1, selectedVariantId });
   };
 
   return (
@@ -558,6 +560,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                     const badge = getBadgeType(product);
                     const categoryLabel = getCategoryLabel(product);
                     const formattedPrice = parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2);
+                    const pricePrefix = hasVariantPriceRange(product) ? "From " : "";
                     const comparePrice = product.compareAtPriceRange 
                       ? parseFloat(product.compareAtPriceRange.minVariantPrice.amount).toFixed(2)
                       : null;
@@ -659,7 +662,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
 
                           <div className="flex items-center gap-2">
                             <p className="text-primary font-bold text-sm sm:text-base font-sans">
-                              ${formattedPrice}
+                              {pricePrefix}${formattedPrice}
                             </p>
                             {comparePrice && (
                               <p className="text-xs text-secondary/40 line-through font-mono">
@@ -917,7 +920,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                 </h2>
                 
                 <p className="text-[#6a5f00] font-sans font-bold text-lg mt-1.5">
-                  ${parseFloat(quickViewProduct.priceRange.minVariantPrice.amount).toFixed(2)}
+                  {hasVariantPriceRange(quickViewProduct) ? "From " : ""}${parseFloat(quickViewProduct.priceRange.minVariantPrice.amount).toFixed(2)}
                 </p>
 
                 <p className="text-xs md:text-sm text-secondary/80 leading-relaxed mt-3.5">
@@ -983,7 +986,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
             <h4 className="text-xs font-bold text-on-surface line-clamp-1">{cartModalItem.product.title}</h4>
             <div className="flex justify-between items-center pt-1">
               <span className="text-[10px] text-secondary font-mono">Qty: 1</span>
-              <span className="text-xs font-bold text-primary">${parseFloat(cartModalItem.product.priceRange.minVariantPrice.amount).toFixed(2)}</span>
+              <span className="text-xs font-bold text-primary">${getSelectedVariantAmount(cartModalItem.product, cartModalItem.selectedVariantId).toFixed(2)}</span>
             </div>
           </div>
         </div>

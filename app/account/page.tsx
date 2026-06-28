@@ -28,6 +28,7 @@ import {
 import FormNotice from "@/components/ui/FormNotice";
 import { AuthUser, clearAuthSession, getCurrentUser, setCurrentUser } from "@/lib/auth";
 import { getWishlist, setWishlist } from "@/lib/wishlist";
+import { getDefaultVariant, hasVariantPriceRange } from "@/lib/pricing";
 import { Product } from "@/types/shopify";
 
 // Types
@@ -391,7 +392,7 @@ export default function AccountPage() {
   };
 
   const handleWishlistAddToCart = (product: Product) => {
-    const firstVariant = product.variants?.[0];
+    const firstVariant = getDefaultVariant(product);
     const selectedVariantId = firstVariant?.id || `var_${product.id}_1`;
     const selectedVariantTitle = firstVariant?.title || "Standard";
 
@@ -1301,7 +1302,9 @@ export default function AccountPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {wishlistItems.map((item) => (
+                    {wishlistItems.map((item) => {
+                      const pricePrefix = hasVariantPriceRange(item) ? "From " : "";
+                      return (
                       <div
                         key={item.id}
                         className="bg-white border border-outline-variant/50 rounded-2xl overflow-hidden shadow-sm group hover:-translate-y-1 hover:shadow-md transition-all duration-300 relative flex flex-col justify-between"
@@ -1333,7 +1336,7 @@ export default function AccountPage() {
 
                           <div className="flex items-center justify-between pt-3 mt-4 border-t border-outline-variant/10">
                             <span className="font-extrabold text-primary text-sm leading-none">
-                              ${parseFloat(item.priceRange.minVariantPrice.amount).toFixed(2)}
+                              {pricePrefix}${parseFloat(item.priceRange.minVariantPrice.amount).toFixed(2)}
                             </span>
                             <button
                               onClick={() => handleWishlistAddToCart(item)}
@@ -1344,7 +1347,8 @@ export default function AccountPage() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </motion.div>

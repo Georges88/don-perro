@@ -25,6 +25,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { Product } from "@/types/shopify";
 import { getWishlist, toggleWishlist } from "@/lib/wishlist";
+import { getDefaultVariant, hasVariantPriceRange } from "@/lib/pricing";
 
 interface SearchResultsProps {
   products: Product[];
@@ -215,8 +216,9 @@ export default function SearchResults({ products }: SearchResultsProps) {
   };
 
   const handleAddToCart = (product: Product) => {
-    const selectedVariantId = product.variants?.[0]?.id || `var_${product.id}_1`;
-    const selectedVariantTitle = product.variants?.[0]?.title || "Default Title";
+    const selectedVariant = getDefaultVariant(product);
+    const selectedVariantId = selectedVariant?.id || `var_${product.id}_1`;
+    const selectedVariantTitle = selectedVariant?.title || "Default Title";
 
     interface CartItem {
       product: Product;
@@ -535,6 +537,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
               {currentItems.map(product => {
                 const badge = getBadge(product);
                 const price = parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2);
+                const pricePrefix = hasVariantPriceRange(product) ? "From " : "";
                 const hasCompare = product.compareAtPriceRange && parseFloat(product.compareAtPriceRange.minVariantPrice.amount) > 0;
                 const comparePrice = hasCompare ? parseFloat(product.compareAtPriceRange!.minVariantPrice.amount).toFixed(2) : null;
 
@@ -611,7 +614,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
 
                       <div className="mt-auto pt-1 flex items-baseline gap-2">
                         <span className="text-primary font-extrabold text-sm sm:text-base font-heading">
-                          ${price}
+                          {pricePrefix}${price}
                         </span>
                         {comparePrice && (
                           <span className="text-[11px] text-secondary/40 line-through font-mono">
@@ -735,7 +738,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
                   
                   <div className="flex items-baseline gap-2 mb-4">
                     <span className="text-primary font-bold text-lg sm:text-xl">
-                      ${parseFloat(quickViewProduct.priceRange.minVariantPrice.amount).toFixed(2)}
+                      {hasVariantPriceRange(quickViewProduct) ? "From " : ""}${parseFloat(quickViewProduct.priceRange.minVariantPrice.amount).toFixed(2)}
                     </span>
                     {quickViewProduct.compareAtPriceRange && parseFloat(quickViewProduct.compareAtPriceRange.minVariantPrice.amount) > 0 && (
                       <span className="text-xs text-secondary/40 line-through font-mono">

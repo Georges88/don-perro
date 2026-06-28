@@ -3,6 +3,7 @@ import { getFeaturedProducts } from "@/lib/shopify";
 import { Star } from "lucide-react";
 import AddToCartButton from "@/components/shop/AddToCartButton";
 import ProductCardActions from "@/components/shop/ProductCardActions";
+import { hasVariantPriceRange } from "@/lib/pricing";
 
 export default async function FeaturedProducts() {
   const products = await getFeaturedProducts();
@@ -74,6 +75,7 @@ export default async function FeaturedProducts() {
           <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-6">
             {products.slice(0, 4).map((product) => {
               const price = parseFloat(product.priceRange.minVariantPrice.amount);
+              const pricePrefix = hasVariantPriceRange(product) ? "From " : "";
               
               return (
                 <div 
@@ -104,7 +106,7 @@ export default async function FeaturedProducts() {
                       {product.title}
                     </h4>
                     <div className="text-sm font-extrabold text-primary mt-1">
-                      ${price.toFixed(2)}
+                      {pricePrefix}${price.toFixed(2)}
                     </div>
                   </Link>
                 </div>

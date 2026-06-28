@@ -21,6 +21,7 @@ import {
   Sparkles 
 } from "lucide-react";
 import { Product } from "@/types/shopify";
+import { getDefaultVariant, getSelectedVariantAmount, hydrateCartLines } from "@/lib/pricing";
 import ProductCardActions from "@/components/shop/ProductCardActions";
 
 // Define Cart Item interface
@@ -65,7 +66,8 @@ export default function CartView({ initialProducts }: CartViewProps) {
     const savedCart = localStorage.getItem("don_perro_cart");
     if (savedCart) {
       try {
-        setCartItems(JSON.parse(savedCart));
+        const parsed = JSON.parse(savedCart);
+        setCartItems(Array.isArray(parsed) ? hydrateCartLines(parsed, initialProducts) : []);
       } catch (e) {
         console.error("Failed to parse cart items from localStorage", e);
         loadDefaultCart();
@@ -101,7 +103,7 @@ export default function CartView({ initialProducts }: CartViewProps) {
       defaults.push({
         product: kibbleProduct,
         quantity: 1,
-        selectedVariantId: kibbleProduct.variants[0]?.id || "var_13_1",
+        selectedVariantId: getDefaultVariant(kibbleProduct)?.id || "var_13_1",
         selectedVariantTitle: "12kg Bag • High Protein"
       });
     }
@@ -109,7 +111,7 @@ export default function CartView({ initialProducts }: CartViewProps) {
       defaults.push({
         product: collarProduct,
         quantity: 1,
-        selectedVariantId: collarProduct.variants[0]?.id || "var_24_1",
+        selectedVariantId: getDefaultVariant(collarProduct)?.id || "var_24_1",
         selectedVariantTitle: "Large • Olive Green"
       });
     }
@@ -154,8 +156,8 @@ export default function CartView({ initialProducts }: CartViewProps) {
       const newItem: CartItem = {
         product,
         quantity: 1,
-        selectedVariantId: product.variants[0]?.id || `var_${product.id}_1`,
-        selectedVariantTitle: product.variants[0]?.title || "Standard"
+        selectedVariantId: getDefaultVariant(product)?.id || `var_${product.id}_1`,
+        selectedVariantTitle: getDefaultVariant(product)?.title || "Standard"
       };
       saveCart([...cartItems, newItem]);
     }
@@ -225,7 +227,7 @@ export default function CartView({ initialProducts }: CartViewProps) {
 
   // Calculate prices
   const subtotal = cartItems.reduce((sum, item) => {
-    const itemPrice = parseFloat(item.product.priceRange.minVariantPrice.amount);
+    const itemPrice = getSelectedVariantAmount(item.product, item.selectedVariantId);
     return sum + (itemPrice * item.quantity);
   }, 0);
 
@@ -436,7 +438,7 @@ export default function CartView({ initialProducts }: CartViewProps) {
                 <div className="divide-y divide-outline-variant/20">
                   <AnimatePresence initial={false}>
                     {cartItems.map((item, lineIndex) => {
-                      const itemPrice = parseFloat(item.product.priceRange.minVariantPrice.amount);
+                      const itemPrice = getSelectedVariantAmount(item.product, item.selectedVariantId);
                       const itemSum = itemPrice * item.quantity;
                       
                       return (

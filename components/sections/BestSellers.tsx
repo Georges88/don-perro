@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getBestSellers } from "@/lib/shopify";
 import AddToCartButton from "@/components/shop/AddToCartButton";
 import ProductCardActions from "@/components/shop/ProductCardActions";
+import { hasVariantPriceRange } from "@/lib/pricing";
 
 export default async function BestSellers() {
   const products = await getBestSellers();
@@ -31,6 +32,7 @@ export default async function BestSellers() {
           {products.map((product) => {
             const hasSale = product.tags.includes("sale");
             const price = parseFloat(product.priceRange.minVariantPrice.amount);
+            const pricePrefix = hasVariantPriceRange(product) ? "From " : "";
             const originalPrice = product.compareAtPriceRange 
               ? parseFloat(product.compareAtPriceRange.minVariantPrice.amount) 
               : null;
@@ -74,7 +76,7 @@ export default async function BestSellers() {
                   </h3>
                   <div className="flex items-baseline gap-2 mt-auto pt-1">
                     <span className="text-sm font-bold text-primary">
-                      ${price.toFixed(2)}
+                      {pricePrefix}${price.toFixed(2)}
                     </span>
                     {originalPrice && (
                       <span className="text-xs text-outline line-through">

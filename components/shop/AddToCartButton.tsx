@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ShoppingCart } from "lucide-react";
 import { Product } from "@/types/shopify";
+import { getDefaultVariant } from "@/lib/pricing";
 
 interface AddToCartButtonProps {
   product: Product;
@@ -19,7 +20,7 @@ interface CartItem {
 export default function AddToCartButton({ product, className = "" }: AddToCartButtonProps) {
   const [added, setAdded] = useState(false);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const firstVariant = product.variants?.[0];
+  const firstVariant = getDefaultVariant(product);
   const isAvailable = Boolean(firstVariant?.availableForSale);
 
   useEffect(() => () => {

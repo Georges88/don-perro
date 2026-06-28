@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Product } from "@/types/shopify";
 import { getWishlist, toggleWishlist, isInWishlist } from "@/lib/wishlist";
+import { formatMoney, getDefaultVariant, getSelectedVariant, getSelectedVariantCompareAtPrice, getSelectedVariantPrice, hasVariantPriceRange } from "@/lib/pricing";
 import ProductCardActions from "@/components/shop/ProductCardActions";
 
 interface ProductDetailsProps {
@@ -32,7 +33,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
   const [activeImg, setActiveImg] = useState<string>(galleryImages[0].url);
 
   // Variant selections
-  const [selectedSize, setSelectedSize] = useState<string>(product.variants[0]?.title || "Standard");
+  const [selectedSize, setSelectedSize] = useState<string>(getDefaultVariant(product)?.title || "Standard");
   const [selectedFormula, setSelectedFormula] = useState<string>("Salmon");
   const [quantity, setQuantity] = useState<number>(1);
 
@@ -40,7 +41,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
   const [activeTab, setActiveTab] = useState<"desc" | "nutrition" | "reviews">("desc");
 
   // Cart action feedback state
-  const [cartModalItem, setCartModalItem] = useState<{ product: Product; quantity: number } | null>(null);
+  const [cartModalItem, setCartModalItem] = useState<{ product: Product; quantity: number; selectedVariantId: string } | null>(null);
 
   useEffect(() => {
     if (!cartModalItem) return;
@@ -74,7 +75,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
       setActiveImg(galleryImages[0].url);
     }
     setQuantity(1);
-    setSelectedSize(product.variants[0]?.title || "Standard");
+    setSelectedSize(getDefaultVariant(product)?.title || "Standard");
     syncWishlist();
   }, [product]);
 
@@ -89,7 +90,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
   // Add to Cart Simulation
   const handleAddToCart = () => {
     // Find matching variant based on selected size
-    const selectedVariant = product.variants?.find(v => v.title === selectedSize) || product.variants?.[0];
+    const selectedVariant = product.variants?.find(v => v.title === selectedSize) || getSelectedVariant(product);
     const selectedVariantId = selectedVariant?.id || `var_${product.id}_1`;
     const selectedVariantTitle = selectedVariant?.title || "Default Title";
     const selectedFormulaOption = (product.tags.includes("food") || product.tags.includes("organic"))
@@ -143,14 +144,16 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
       console.error("Failed to save cart items:", err);
     }
 
-    setCartModalItem({ product, quantity });
+    setCartModalItem({ product, quantity, selectedVariantId });
   };
 
   // Safe Parsing numeric elements
-  const mainPrice = parseFloat(product.priceRange.minVariantPrice.amount);
-  const totalDisplayPrice = (mainPrice * quantity).toFixed(2);
-  const comparePrice = product.compareAtPriceRange 
-    ? (parseFloat(product.compareAtPriceRange.minVariantPrice.amount) * quantity).toFixed(2)
+  const selectedVariant = product.variants?.find(v => v.title === selectedSize) || getSelectedVariant(product);
+  const selectedVariantId = selectedVariant?.id;
+  const selectedPrice = getSelectedVariantPrice(product, selectedVariantId);
+  const selectedCompareAtPrice = getSelectedVariantCompareAtPrice(product, selectedVariantId);
+  const comparePrice = selectedCompareAtPrice && Number(selectedCompareAtPrice.amount) > Number(selectedPrice.amount)
+    ? formatMoney(selectedCompareAtPrice, quantity)
     : null;
 
   // Filter Related Products (excl. current product)
@@ -290,18 +293,18 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
             <div className="pb-4 border-b border-surface-variant/40 space-y-2">
               <div className="flex items-baseline gap-3">
                 <span className="text-3xl font-heading font-extrabold text-primary">
-                  ${totalDisplayPrice}
+                  {formatMoney(selectedPrice, quantity)}
                 </span>
                 {comparePrice && (
                   <span className="text-lg text-secondary/50 line-through font-medium">
-                    ${comparePrice}
+                    {comparePrice}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div>
                 <span className="text-xs font-semibold text-secondary">
-                  {product.variants[0]?.availableForSale ? "In Stock & Ready to Ship" : "In Stock"}
+                  {selectedVariant?.availableForSale ? "In Stock & Ready to Ship" : "In Stock"}
                 </span>
               </div>
             </div>
@@ -619,6 +622,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {relatedProducts.map((p) => {
               const itemPrice = parseFloat(p.priceRange.minVariantPrice.amount).toFixed(2);
+              const pricePrefix = hasVariantPriceRange(p) ? "From " : "";
               const isNew = p.tags.includes("new");
               const isSale = p.tags.includes("sale");
 
@@ -661,7 +665,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
                   </Link>
 
                   <span className="text-primary font-bold text-xs sm:text-sm">
-                    ${itemPrice}
+                    {pricePrefix}${itemPrice}
                   </span>
                 </div>
               );
@@ -693,7 +697,9 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
             <h4 className="text-xs font-bold text-on-surface line-clamp-1">{cartModalItem.product.title}</h4>
             <div className="flex justify-between items-center pt-1">
               <span className="text-[10px] text-secondary font-mono">Qty: {cartModalItem.quantity}</span>
-              <span className="text-xs font-bold text-primary">${(parseFloat(cartModalItem.product.priceRange.minVariantPrice.amount) * cartModalItem.quantity).toFixed(2)}</span>
+              <span className="text-xs font-bold text-primary">
+                {formatMoney(getSelectedVariantPrice(cartModalItem.product, cartModalItem.selectedVariantId), cartModalItem.quantity)}
+              </span>
             </div>
           </div>
         </div>

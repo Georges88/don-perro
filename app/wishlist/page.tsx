@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Product } from "@/types/shopify";
 import { clearWishlist, getWishlist } from "@/lib/wishlist";
+import { getDefaultVariant, hasVariantPriceRange } from "@/lib/pricing";
 import ProductCardActions from "@/components/shop/ProductCardActions";
 import { mockProducts } from "@/data/mockData";
 
@@ -80,7 +81,7 @@ export default function WishlistPage() {
       currentCart = [];
     }
 
-    const firstVariant = product.variants?.[0];
+    const firstVariant = getDefaultVariant(product);
     const selectedVariantId = firstVariant?.id || `var_${product.id}_1`;
     const selectedVariantTitle = firstVariant?.title || "Standard";
 
@@ -212,6 +213,7 @@ export default function WishlistPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {wishlistItems.map((product) => {
               const price = parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2);
+              const pricePrefix = hasVariantPriceRange(product) ? "From " : "";
               const comparePrice = product.compareAtPriceRange 
                 ? parseFloat(product.compareAtPriceRange.minVariantPrice.amount).toFixed(2)
                 : null;
@@ -251,7 +253,7 @@ export default function WishlistPage() {
 
                   <div className="flex items-baseline gap-2 mb-4">
                     <span className="text-primary font-extrabold text-sm sm:text-base font-sans">
-                      ${price}
+                      {pricePrefix}${price}
                     </span>
                     {comparePrice && (
                       <span className="text-[11px] text-secondary/40 line-through font-mono">
@@ -300,6 +302,7 @@ export default function WishlistPage() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                 {recommendations.map((rec) => {
                   const recPrice = parseFloat(rec.priceRange.minVariantPrice.amount).toFixed(2);
+                  const recPricePrefix = hasVariantPriceRange(rec) ? "From " : "";
                   return (
                     <div key={rec.id} className="group relative flex flex-col bg-surface-container-lowest border border-secondary/10 p-2.5 rounded-xl">
                       <Link href={`/products/${rec.handle}`} className="block relative aspect-square overflow-hidden bg-surface-container rounded-lg mb-2">
@@ -313,7 +316,7 @@ export default function WishlistPage() {
                         {rec.title}
                       </Link>
                       <span className="text-primary font-bold text-xs mt-1">
-                        ${recPrice}
+                        {recPricePrefix}${recPrice}
                       </span>
                     </div>
                   );

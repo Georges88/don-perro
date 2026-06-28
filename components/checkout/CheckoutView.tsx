@@ -20,6 +20,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { Product } from "@/types/shopify";
+import { getDefaultVariant, getSelectedVariantAmount, hydrateCartLines } from "@/lib/pricing";
 
 interface CartItem {
   product: Product;
@@ -77,7 +78,8 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
 
     if (savedCart) {
       try {
-        loadedItems = JSON.parse(savedCart);
+        const parsed = JSON.parse(savedCart);
+        loadedItems = Array.isArray(parsed) ? hydrateCartLines(parsed, initialProducts) : [];
       } catch (e) {
         console.error("Failed to parse cart JSON", e);
       }
@@ -92,7 +94,7 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
         loadedItems.push({
           product: feast,
           quantity: 1,
-          selectedVariantId: feast.variants[0]?.id || "var_29_1",
+          selectedVariantId: getDefaultVariant(feast)?.id || "var_29_1",
           selectedVariantTitle: "2.5kg • Organic Grain-Free"
         });
       }
@@ -100,7 +102,7 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
         loadedItems.push({
           product: collar,
           quantity: 1,
-          selectedVariantId: collar.variants[0]?.id || "var_30_1",
+          selectedVariantId: getDefaultVariant(collar)?.id || "var_30_1",
           selectedVariantTitle: "Tan Brown • Medium"
         });
       }
@@ -234,7 +236,7 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
 
   // calculations
   const subtotal = cartItems.reduce((sum, item) => {
-    const price = parseFloat(item.product.priceRange.minVariantPrice.amount);
+    const price = getSelectedVariantAmount(item.product, item.selectedVariantId);
     return sum + price * item.quantity;
   }, 0);
 
@@ -741,7 +743,7 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
                           {item.quantity > 1 && (
                             <p className="text-[10px] text-secondary/65 font-bold uppercase tracking-wider mt-0.5">Qty: {item.quantity}</p>
                           )}
-                          <p className="text-primary font-bold text-xs mt-1.5">${parseFloat(item.product.priceRange.minVariantPrice.amount).toFixed(2)}</p>
+                          <p className="text-primary font-bold text-xs mt-1.5">${getSelectedVariantAmount(item.product, item.selectedVariantId).toFixed(2)}</p>
                         </div>
                       </div>
                     ))}
