@@ -60,6 +60,12 @@ export default function AuthForm() {
     startShopifyLogin(normalizedEmail);
   };
 
+  const handleHostedLogin = () => {
+    setFormError(null);
+    setLoading(true);
+    startShopifyLogin(loginEmail.trim());
+  };
+
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const normalizedEmail = regEmail.trim();
@@ -258,7 +264,9 @@ export default function AuthForm() {
               {/* Social Login */}
               <button 
                 type="button"
-                className="w-full flex items-center justify-center gap-3 py-3 px-4 border-[1.5px] border-outline-variant rounded-full text-on-surface font-semibold text-xs hover:bg-surface-container-low transition-colors duration-200 cursor-pointer"
+                onClick={handleHostedLogin}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-3 py-3 px-4 border-[1.5px] border-outline-variant rounded-full text-on-surface font-semibold text-xs hover:bg-surface-container-low transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
               >
                 <img
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcZOvH0jK-aZgG_Ndja_oOaFOV-VQOwG6lk9Vzv0D5JLx7XAlADTUJ0bJDtj7Sgnu4JAZkEXo81rgJFEZBWS6dTirHxKtr_SnElEMcY8vX1HaA9TrCn8W5g7_9nx_T3hI6KeWyLiIxuBngqvaV0cYjrfdVSPkN6wd18tcaVg-PHMOgiXcxe1LfFv8qJH78kle2nHnHf0biPRV4oMk55Y1KIYxmWnnraeCQKxanq4pCKY3lW3-Em6JLtLi6Qm0B02gUKzafW5f7vDvQ"
