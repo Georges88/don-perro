@@ -393,7 +393,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
         </div>
 
         {/* Description */}
-        <div className="min-h-48 mb-20 animate-fade-in text-on-surface font-sans">
+        <div className="mb-10 animate-fade-in text-on-surface font-sans">
           <div className="max-w-3xl space-y-3">
             <h3 className="text-lg font-heading font-extrabold text-[#191c1c]">
               Product Description
@@ -405,7 +405,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
         </div>
 
         {/* RELATED PRODUCTS SECTION ("You May Also Like") */}
-        <section className="border-t border-surface-variant/30 pt-16">
+        <section className="border-t border-surface-variant/30 pt-10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
             <div>
               <h2 className="text-2xl font-bold font-heading text-[#191c1c] tracking-tight">

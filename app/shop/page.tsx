@@ -1,4 +1,4 @@
-import { getProducts } from "@/lib/shopify";
+import { getCollections, getProducts } from "@/lib/shopify";
 import BoutiqueCatalog from "@/components/shop/BoutiqueCatalog";
 
 export const metadata = {
@@ -9,10 +9,11 @@ export const metadata = {
 export default async function ShopPage() {
   // Fetch products on server side securely
   const products = await getProducts();
+  const collections = await getCollections();
 
   return (
     <main className="min-h-screen bg-background">
-      <BoutiqueCatalog initialProducts={products} />
+      <BoutiqueCatalog initialProducts={products} initialCollections={collections} />
     </main>
   );
 }
