@@ -658,9 +658,6 @@
   .block {
     display: block;
   }
-  .contents {
-    display: contents;
-  }
   .flex {
     display: flex;
   }
@@ -1603,12 +1600,6 @@
       border-color: color-mix(in oklab, var(--color-secondary) 35%, transparent);
     }
   }
-  .border-surface-variant\/20 {
-    border-color: color-mix(in srgb, #e1e3e3 20%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      border-color: color-mix(in oklab, var(--color-surface-variant) 20%, transparent);
-    }
-  }
   .border-surface-variant\/30 {
     border-color: color-mix(in srgb, #e1e3e3 30%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -2259,9 +2250,6 @@
   }
   .pb-2 {
     padding-bottom: calc(var(--spacing) * 2);
-  }
-  .pb-2\.5 {
-    padding-bottom: calc(var(--spacing) * 2.5);
   }
   .pb-3\.5 {
     padding-bottom: calc(var(--spacing) * 3.5);
@@ -4316,11 +4304,6 @@
   .md\:gap-6 {
     @media (width >= 48rem) {
       gap: calc(var(--spacing) * 6);
-    }
-  }
-  .md\:gap-8 {
-    @media (width >= 48rem) {
-      gap: calc(var(--spacing) * 8);
     }
   }
   .md\:overflow-visible {

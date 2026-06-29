@@ -5,7 +5,6 @@ import Link from "next/link";
 import { 
   Star, 
   ShoppingCart, 
-  CheckCircle, 
   Truck, 
   ShieldCheck, 
   Plus, 
@@ -36,9 +35,6 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
   const [selectedSize, setSelectedSize] = useState<string>(getDefaultVariant(product)?.title || "Standard");
   const [selectedFormula, setSelectedFormula] = useState<string>("Salmon");
   const [quantity, setQuantity] = useState<number>(1);
-
-  // Active Tab
-  const [activeTab, setActiveTab] = useState<"desc" | "nutrition" | "reviews">("desc");
 
   // Cart action feedback state
   const [cartModalItem, setCartModalItem] = useState<{ product: Product; quantity: number; selectedVariantId: string } | null>(null);
@@ -160,41 +156,6 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
   const relatedProducts = allProducts
     .filter(p => p.id !== product.id)
     .slice(0, 4);
-
-  // Benefits for mock description list
-  const getProductBenefits = () => {
-    if (product.tags.includes("food") || product.tags.includes("organic") || product.tags.includes("treats")) {
-      return [
-        "Grain-free and Gluten-free formula",
-        "Rich in Omega-3 Fatty Acids",
-        "No artificial colors or preservatives",
-        "Probiotics for digestive health"
-      ];
-    } else if (product.tags.includes("comfort") || product.tags.includes("bed")) {
-      return [
-        "Orthopedic dual-density memory foam core",
-        "Removable and fully washable premium cover",
-        "Non-slip moisture barrier bottom fabric",
-        "Encourages joint support and muscular relaxation"
-      ];
-    } else if (product.tags.includes("accessories") || product.tags.includes("leather")) {
-      return [
-        "100% fine top-grain vegetable tanned leather",
-        "Hand-polished brass durability fixtures",
-        "Adjustable custom comfort form buckles",
-        "Individually stitched with heavy-duty thread"
-      ];
-    } else {
-      return [
-        "Antibacterial non-toxic components",
-        "Engineered for durability and proactive play",
-        "Eco-friendly and sustainable materials",
-        "Vibrant safe-pigment tactile fabrics"
-      ];
-    }
-  };
-
-  const benefits = getProductBenefits();
 
   return (
     <div className="bg-background min-h-screen text-on-surface">
@@ -431,173 +392,16 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
           </div>
         </div>
 
-        {/* Informative Tabs Section (Description, Nutrition, Reviews) */}
-        <div className="border-b border-surface-variant/40 flex gap-6 md:gap-8 mb-8 overflow-x-auto select-none">
-          <button
-            onClick={() => setActiveTab("desc")}
-            className={`pb-4 text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-              activeTab === "desc"
-                ? "border-primary text-primary"
-                : "border-transparent text-secondary hover:text-on-surface"
-            }`}
-          >
-            Description
-          </button>
-          <button
-            onClick={() => setActiveTab("nutrition")}
-            className={`pb-4 text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-              activeTab === "nutrition"
-                ? "border-primary text-primary"
-                : "border-transparent text-secondary hover:text-on-surface"
-            }`}
-          >
-            Nutritional Info
-          </button>
-          <button
-            onClick={() => setActiveTab("reviews")}
-            className={`pb-4 text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-              activeTab === "reviews"
-                ? "border-primary text-primary"
-                : "border-transparent text-secondary hover:text-on-surface"
-            }`}
-          >
-            Customer Reviews
-          </button>
-        </div>
-
-        {/* Tab display contents */}
+        {/* Description */}
         <div className="min-h-48 mb-20 animate-fade-in text-on-surface font-sans">
-          
-          {/* Description Block */}
-          {activeTab === "desc" && (
-            <div className="max-w-3xl space-y-6">
-              <div className="space-y-3">
-                <h3 className="text-lg font-heading font-extrabold text-[#191c1c]">
-                  Artisanal Nutrition for Your Best Friend
-                </h3>
-                <p className="text-secondary/95 text-sm md:text-base leading-relaxed">
-                  {product.description}
-                </p>
-              </div>
-
-              {/* Styled Benefits with checklist icons */}
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                {benefits.map((benefit, idx) => (
-                  <li key={idx} className="flex items-start gap-2.5">
-                    <CheckCircle className="w-4 h-4 text-primary inline-block flex-shrink-0 mt-0.5" />
-                    <span className="text-xs sm:text-sm text-[#191c1c] font-medium leading-relaxed">
-                      {benefit}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Nutritional Info / Specifications block */}
-          {activeTab === "nutrition" && (
-            <div className="max-w-xl bg-surface-container-low border border-surface-variant/20 p-6 rounded-2xl">
-              {product.tags.includes("food") || product.tags.includes("organic") || product.tags.includes("treats") ? (
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-[#191c1c] border-b border-outline-variant/10 pb-2">
-                    Guaranteed Analysis
-                  </h3>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between border-b border-surface-variant/20 pb-2.5 text-secondary">
-                      <span>Crude Protein (min)</span>
-                      <span className="font-bold text-on-surface">24.0%</span>
-                    </div>
-                    <div className="flex justify-between border-b border-surface-variant/20 pb-2.5 text-secondary">
-                      <span>Crude Fat (min)</span>
-                      <span className="font-bold text-on-surface">14.0%</span>
-                    </div>
-                    <div className="flex justify-between border-b border-surface-variant/20 pb-2.5 text-secondary">
-                      <span>Crude Fiber (max)</span>
-                      <span className="font-bold text-on-surface">4.0%</span>
-                    </div>
-                    <div className="flex justify-between border-b border-surface-variant/20 pb-2.5 text-secondary">
-                      <span>Moisture (max)</span>
-                      <span className="font-bold text-on-surface">10.0%</span>
-                    </div>
-                    <div className="flex justify-between text-secondary">
-                      <span>Omega-3 Fatty Acids (min)</span>
-                      <span className="font-bold text-on-surface">0.8%</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-[#191c1c] border-b border-outline-variant/10 pb-2">
-                    Product Specifications
-                  </h3>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between border-b border-surface-variant/20 pb-2.5 text-secondary">
-                      <span>Vendor Brand</span>
-                      <span className="font-bold text-on-surface">{product.vendor}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-surface-variant/20 pb-2.5 text-secondary">
-                      <span>Product Category</span>
-                      <span className="font-bold text-on-surface">{product.productType}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-surface-variant/20 pb-2.5 text-secondary">
-                      <span>Care Instructions</span>
-                      <span className="font-bold text-on-surface">Wipe with soft slightly damp cloth</span>
-                    </div>
-                    <div className="flex justify-between text-secondary">
-                      <span>Sustainability Check</span>
-                      <span className="font-bold text-on-surface">100% Eco-conscious compliant</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Customer Reviews block */}
-          {activeTab === "reviews" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
-              {/* Review 1 */}
-              <div className="p-6 bg-white rounded-2xl border border-surface-variant/20 shadow-xs space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-bold text-sm text-[#191c1c] font-sans">Sarah Jenkins</h4>
-                    <div className="flex items-center text-[#ffcc00] mt-1">
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                    </div>
-                  </div>
-                  <span className="text-[10px] sm:text-xs font-semibold text-secondary/60">2 days ago</span>
-                </div>
-                <p className="text-secondary/90 italic font-sans text-xs sm:text-sm leading-relaxed">
-                  "My lab usually has such a sensitive stomach, but she absolutely loves this salmon recipe. Her coat has never looked shinier!"
-                </p>
-              </div>
-
-              {/* Review 2 */}
-              <div className="p-6 bg-white rounded-2xl border border-surface-variant/20 shadow-xs space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-bold text-sm text-[#191c1c] font-sans">Mark Thompson</h4>
-                    <div className="flex items-center text-[#ffcc00] mt-1">
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                      <Star className="w-3.5 h-3.5 opacity-30" />
-                    </div>
-                  </div>
-                  <span className="text-[10px] sm:text-xs font-semibold text-secondary/60">1 week ago</span>
-                </div>
-                <p className="text-secondary/90 italic font-sans text-xs sm:text-sm leading-relaxed">
-                  "Premium quality as expected. The packaging is beautiful and it actually smells like real food, not just typical kibble."
-                </p>
-              </div>
-            </div>
-          )}
-
+          <div className="max-w-3xl space-y-3">
+            <h3 className="text-lg font-heading font-extrabold text-[#191c1c]">
+              Product Description
+            </h3>
+            <p className="text-secondary/95 text-sm md:text-base leading-relaxed">
+              {product.description}
+            </p>
+          </div>
         </div>
 
         {/* RELATED PRODUCTS SECTION ("You May Also Like") */}
