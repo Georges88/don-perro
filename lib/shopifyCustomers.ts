@@ -4,6 +4,7 @@ export interface CreateShopifyCustomerInput {
   firstName: string;
   lastName: string;
   email: string;
+  password: string;
   petPreference?: "dog" | "cat" | "multiple" | null;
 }
 
@@ -22,7 +23,7 @@ interface ShopifyUserError {
 interface CustomerCreateResponse {
   customerCreate: {
     customer: ShopifyCustomer | null;
-    userErrors: ShopifyUserError[];
+    customerUserErrors: ShopifyUserError[];
   };
 }
 
@@ -32,7 +33,7 @@ interface GraphQLResponse<T> {
 }
 
 const CUSTOMER_CREATE_MUTATION = `#graphql
-  mutation CreateDonPerroCustomer($input: CustomerInput!) {
+  mutation CreateDonPerroCustomer($input: CustomerCreateInput!) {
     customerCreate(input: $input) {
       customer {
         id
@@ -40,7 +41,7 @@ const CUSTOMER_CREATE_MUTATION = `#graphql
         lastName
         email
       }
-      userErrors {
+      customerUserErrors {
         field
         message
       }
@@ -48,31 +49,26 @@ const CUSTOMER_CREATE_MUTATION = `#graphql
   }
 `;
 
-function getShopifyAdminConfig() {
+function getShopifyStorefrontConfig() {
   const domain = process.env.SHOPIFY_STORE_DOMAIN?.trim();
-  const token = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN?.trim();
+  const token = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN?.trim();
   const version = process.env.SHOPIFY_API_VERSION?.trim() || "2026-04";
 
   if (!domain || !token) {
-    throw new Error("Shopify Admin API environment variables are not configured.");
+    throw new Error("Shopify Storefront API environment variables are not configured.");
   }
 
   return { domain, token, version };
 }
 
 export async function createShopifyCustomer(input: CreateShopifyCustomerInput): Promise<ShopifyCustomer> {
-  const { domain, token, version } = getShopifyAdminConfig();
-  const tags = ["don-perro-web-customer"];
+  const { domain, token, version } = getShopifyStorefrontConfig();
 
-  if (input.petPreference) {
-    tags.push(`pet-preference-${input.petPreference}`);
-  }
-
-  const response = await fetch(`https://${domain}/admin/api/${version}/graphql.json`, {
+  const response = await fetch(`https://${domain}/api/${version}/graphql.json`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Shopify-Access-Token": token,
+      "X-Shopify-Storefront-Access-Token": token,
     },
     body: JSON.stringify({
       query: CUSTOMER_CREATE_MUTATION,
@@ -81,7 +77,7 @@ export async function createShopifyCustomer(input: CreateShopifyCustomerInput): 
           firstName: input.firstName,
           lastName: input.lastName,
           email: input.email,
-          tags,
+          password: input.password,
         },
       },
     }),
@@ -95,8 +91,8 @@ export async function createShopifyCustomer(input: CreateShopifyCustomerInput): 
   }
 
   const result = payload.data.customerCreate;
-  if (Array.isArray(result.userErrors) && result.userErrors.length) {
-    throw new Error(result.userErrors.map((error) => error.message).join(" "));
+  if (Array.isArray(result.customerUserErrors) && result.customerUserErrors.length) {
+    throw new Error(result.customerUserErrors.map((error) => error.message).join(" "));
   }
 
   if (!result.customer) {

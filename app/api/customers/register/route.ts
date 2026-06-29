@@ -9,6 +9,7 @@ export async function POST(request: Request) {
     const firstName = String(body.firstName || "").trim();
     const lastName = String(body.lastName || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
+    const password = String(body.password || "");
     const petPreference = body.petPreference ?? null;
 
     if (!firstName || !lastName) {
@@ -19,6 +20,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
 
+    if (password.length < 8) {
+      return NextResponse.json({ error: "Please choose a password with at least 8 characters." }, { status: 400 });
+    }
+
     if (petPreference && !["dog", "cat", "multiple"].includes(petPreference)) {
       return NextResponse.json({ error: "Please choose a valid pet preference." }, { status: 400 });
     }
@@ -27,6 +32,7 @@ export async function POST(request: Request) {
       firstName,
       lastName,
       email,
+      password,
       petPreference,
     });
 

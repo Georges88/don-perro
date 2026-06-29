@@ -81,6 +81,7 @@ export default function AuthForm() {
           firstName: regFirstName,
           lastName: regLastName,
           email: normalizedEmail,
+          password: regPassword,
           petPreference: petPref,
         }),
       });
