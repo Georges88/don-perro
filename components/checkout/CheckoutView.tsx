@@ -27,7 +27,6 @@ interface CartItem {
   quantity: number;
   selectedVariantId: string;
   selectedVariantTitle: string;
-  selectedFormula?: string;
 }
 
 interface CheckoutViewProps {
@@ -735,11 +734,6 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
                           <p className="text-[11px] text-secondary/80 font-medium">
                             <span className="font-bold">Size:</span> {item.selectedVariantTitle}
                           </p>
-                          {item.selectedFormula && (
-                            <p className="text-[11px] text-secondary/80 font-medium">
-                              <span className="font-bold">Formula:</span> {item.selectedFormula}
-                            </p>
-                          )}
                           {item.quantity > 1 && (
                             <p className="text-[10px] text-secondary/65 font-bold uppercase tracking-wider mt-0.5">Qty: {item.quantity}</p>
                           )}

@@ -33,7 +33,6 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
 
   // Variant selections
   const [selectedSize, setSelectedSize] = useState<string>(getDefaultVariant(product)?.title || "Standard");
-  const [selectedFormula, setSelectedFormula] = useState<string>("Salmon");
   const [quantity, setQuantity] = useState<number>(1);
 
   // Cart action feedback state
@@ -89,16 +88,12 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
     const selectedVariant = product.variants?.find(v => v.title === selectedSize) || getSelectedVariant(product);
     const selectedVariantId = selectedVariant?.id || `var_${product.id}_1`;
     const selectedVariantTitle = selectedVariant?.title || "Default Title";
-    const selectedFormulaOption = (product.tags.includes("food") || product.tags.includes("organic"))
-      ? selectedFormula
-      : undefined;
 
     interface CartItem {
       product: Product;
       quantity: number;
       selectedVariantId: string;
       selectedVariantTitle: string;
-      selectedFormula?: string;
     }
 
     let currentCart: CartItem[] = [];
@@ -117,8 +112,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
 
     const existingIndex = currentCart.findIndex(
       item => item.product.id === product.id &&
-        item.selectedVariantId === selectedVariantId &&
-        item.selectedFormula === selectedFormulaOption
+        item.selectedVariantId === selectedVariantId
     );
 
     if (existingIndex > -1) {
@@ -128,8 +122,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
         product,
         quantity,
         selectedVariantId,
-        selectedVariantTitle,
-        selectedFormula: selectedFormulaOption
+        selectedVariantTitle
       });
     }
 
@@ -293,37 +286,6 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
                       </button>
                     );
                   })}
-                </div>
-              </div>
-            )}
-
-            {/* Formula Type (Only for Dog Foods matching mock spec) */}
-            {(product.tags.includes("food") || product.tags.includes("organic")) && (
-              <div className="space-y-3">
-                <span className="text-xs font-bold text-[#191c1c] uppercase tracking-wider block">
-                  Formula Type
-                </span>
-                <div className="flex flex-wrap gap-2.5 select-none">
-                  <button
-                    onClick={() => setSelectedFormula("Salmon")}
-                    className={`px-5 py-2.5 rounded-xl border-2 text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                      selectedFormula === "Salmon"
-                        ? "border-primary bg-primary/5 text-primary shadow-sm"
-                        : "border-outline-variant/40 hover:border-secondary/60 text-secondary"
-                    }`}
-                  >
-                    Salmon
-                  </button>
-                  <button
-                    onClick={() => setSelectedFormula("Beef & Barley")}
-                    className={`px-5 py-2.5 rounded-xl border-2 text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                      selectedFormula === "Beef & Barley"
-                        ? "border-primary bg-primary/5 text-primary shadow-sm"
-                        : "border-outline-variant/40 hover:border-secondary/60 text-secondary"
-                    }`}
-                  >
-                    Beef &amp; Barley
-                  </button>
                 </div>
               </div>
             )}

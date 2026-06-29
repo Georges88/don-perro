@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
@@ -30,7 +29,6 @@ interface CartItem {
   quantity: number;
   selectedVariantId: string;
   selectedVariantTitle: string;
-  selectedFormula?: string;
 }
 
 interface CartViewProps {
@@ -47,7 +45,6 @@ export default function CartView({ initialProducts }: CartViewProps) {
     ["bamboo-chew-set", "salmon-bites", "explorer-leash", "zen-ceramic-set"].includes(p.handle)
   );
 
-  const router = useRouter();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [mounted, setMounted] = useState(false);
   const [promoCode, setPromoCode] = useState("");
@@ -55,6 +52,7 @@ export default function CartView({ initialProducts }: CartViewProps) {
   const [promoDiscount, setPromoDiscount] = useState<number>(0); // fraction like 0.1 for 10%
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoSuccessMessage, setPromoSuccessMessage] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // checkout success state
   const [checkoutStep, setCheckoutStep] = useState<"cart" | "processing" | "success">("cart");
@@ -209,19 +207,45 @@ export default function CartView({ initialProducts }: CartViewProps) {
 
   // Checkout sequence navigation
   const handleProceedToCheckout = async () => {
-    try {
-      const response = await fetch("/api/auth/me", { cache: "no-store" });
-      const payload = response.ok ? await response.json() : null;
+    if (cartItems.length === 0) return;
 
-      if (!payload?.authenticated) {
-        router.push("/login?returnTo=/checkout");
-        return;
+    setCheckoutStep("processing");
+    setCheckoutError(null);
+
+    try {
+      let customerEmail: string | undefined;
+      try {
+        const authResponse = await fetch("/api/auth/me", { cache: "no-store" });
+        const authPayload = authResponse.ok ? await authResponse.json() : null;
+        customerEmail = authPayload?.authenticated ? authPayload.user?.email : undefined;
+      } catch {
+        customerEmail = undefined;
       }
 
-      router.push("/checkout");
+      const checkoutResponse = await fetch("/api/checkout/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: customerEmail,
+          lines: cartItems.map((item) => ({
+            selectedVariantId: item.selectedVariantId,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+      const checkoutPayload = await checkoutResponse.json();
+
+      if (!checkoutResponse.ok || !checkoutPayload.checkoutUrl) {
+        throw new Error(checkoutPayload.error || "Unable to create Shopify checkout.");
+      }
+
+      window.location.href = checkoutPayload.checkoutUrl;
     } catch (error) {
       console.error(error);
-      router.push("/login?returnTo=/checkout");
+      setCheckoutStep("cart");
+      setCheckoutError(error instanceof Error ? error.message : "Unable to create Shopify checkout.");
     }
   };
 
@@ -443,7 +467,7 @@ export default function CartView({ initialProducts }: CartViewProps) {
                       
                       return (
                         <motion.div 
-                          key={`${item.product.id}-${item.selectedVariantId}-${item.selectedFormula || "default"}`}
+                          key={`${item.product.id}-${item.selectedVariantId}`}
                           layout
                           exit={{ opacity: 0, x: -50, height: 0, padding: 0 }}
                           transition={{ duration: 0.2 }}
@@ -476,9 +500,6 @@ export default function CartView({ initialProducts }: CartViewProps) {
                               </Link>
                               <div className="text-xs text-secondary/80 font-medium mb-3 space-y-0.5">
                                 <p><span className="font-bold text-secondary">Size:</span> {item.selectedVariantTitle}</p>
-                                {item.selectedFormula && (
-                                  <p><span className="font-bold text-secondary">Formula:</span> {item.selectedFormula}</p>
-                                )}
                               </div>
                               
                               <button 
@@ -635,6 +656,11 @@ export default function CartView({ initialProducts }: CartViewProps) {
 
                   {/* Prompt check-out actions */}
                   <div className="space-y-3">
+                    {checkoutError && (
+                      <div className="rounded-2xl border border-error/20 bg-error-container/20 px-4 py-3 text-xs font-semibold text-error">
+                        {checkoutError}
+                      </div>
+                    )}
                     <button 
                       onClick={handleProceedToCheckout}
                       className="w-full bg-primary hover:bg-[#525717] text-on-primary py-3.5 px-4 rounded-full font-bold text-xs shadow-md shadow-primary/10 hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer group"

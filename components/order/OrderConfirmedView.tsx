@@ -27,7 +27,6 @@ interface OrderItem {
   quantity: number;
   selectedVariantId: string;
   selectedVariantTitle: string;
-  selectedFormula?: string;
 }
 
 interface OrderData {
@@ -488,11 +487,6 @@ export default function OrderConfirmedView() {
                         <p className="font-label-sm text-secondary text-xs mt-1">
                           <span className="font-bold">Size:</span> {item.selectedVariantTitle}
                         </p>
-                        {item.selectedFormula && (
-                          <p className="font-label-sm text-secondary text-xs mt-0.5">
-                            <span className="font-bold">Formula:</span> {item.selectedFormula}
-                          </p>
-                        )}
                         <p className="font-label-sm text-secondary text-xs mt-0.5">
                           Qty: {item.quantity}
                         </p>
