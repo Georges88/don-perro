@@ -386,7 +386,7 @@ export default function AuthForm() {
                       required
                       value={regFirstName}
                       onChange={(e) => setRegFirstName(e.target.value)}
-                      placeholder="Pet's"
+                      placeholder="First Name"
                       className="w-full bg-surface-container-low border-[1.5px] border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-secondary/40"
                     />
                   </div>
@@ -400,7 +400,7 @@ export default function AuthForm() {
                       required
                       value={regLastName}
                       onChange={(e) => setRegLastName(e.target.value)}
-                      placeholder="Best Friend"
+                      placeholder="Last Name"
                       className="w-full bg-surface-container-low border-[1.5px] border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-secondary/40"
                     />
                   </div>
@@ -416,7 +416,7 @@ export default function AuthForm() {
                     required
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="name@domain.com"
+                    placeholder="youremail@example.com"
                     className="w-full bg-surface-container-low border-[1.5px] border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-secondary/40"
                   />
                 </div>
