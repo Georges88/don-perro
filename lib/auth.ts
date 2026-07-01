@@ -2,6 +2,7 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
   petPreference?: "dog" | "cat" | "multiple" | null;
 }
 
@@ -15,12 +16,13 @@ export function getCurrentUser(): AuthUser | null {
     if (!savedUser) return null;
 
     const parsed = JSON.parse(savedUser) as Partial<AuthUser>;
-    if (!parsed.email || !parsed.firstName || !parsed.lastName) return null;
+    if (!parsed.email) return null;
 
     return {
-      firstName: parsed.firstName,
-      lastName: parsed.lastName,
+      firstName: parsed.firstName || "",
+      lastName: parsed.lastName || "",
       email: parsed.email,
+      phone: parsed.phone || "",
       petPreference: parsed.petPreference ?? null
     };
   } catch (error) {
@@ -56,6 +58,7 @@ export function createUserFromEmail(email: string): AuthUser {
   return {
     firstName,
     lastName: lastNameParts.join(" ") || "Perro",
-    email
+    email,
+    phone: ""
   };
 }

@@ -134,6 +134,7 @@ export default function AccountPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
 
   // Address State
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -142,10 +143,10 @@ export default function AccountPage() {
   const [isAddingAddress, setIsAddingAddress] = useState(false);
 
   // Profile Form State
-  const [firstName, setFirstName] = useState("Mateo");
-  const [lastName, setLastName] = useState("Alvarez");
-  const [email, setEmail] = useState("mateo.alvarez@example.com");
-  const [phone, setPhone] = useState("+1 (555) 382-9901");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [marketingOptIn, setMarketingOptIn] = useState(true);
 
   useEffect(() => {
@@ -153,7 +154,14 @@ export default function AccountPage() {
       try {
         const response = await fetch("/api/auth/me", { cache: "no-store" });
         const payload = await response.json();
-        const currentUser = payload.authenticated ? payload.user as AuthUser : getCurrentUser();
+        const shopifyUser = payload.authenticated ? payload.user as AuthUser : null;
+        const savedUser = getCurrentUser();
+        const currentUser = shopifyUser
+          ? {
+              ...shopifyUser,
+              phone: savedUser?.email === shopifyUser.email ? savedUser.phone || "" : "",
+            }
+          : savedUser;
 
         if (!currentUser) {
           setAuthStatus("guest");
@@ -165,6 +173,7 @@ export default function AccountPage() {
         setFirstName(currentUser.firstName);
         setLastName(currentUser.lastName);
         setEmail(currentUser.email);
+        setPhone(currentUser.phone || "");
         setAuthStatus("authenticated");
         loadOrders();
       } catch (error) {
@@ -179,6 +188,7 @@ export default function AccountPage() {
         setFirstName(currentUser.firstName);
         setLastName(currentUser.lastName);
         setEmail(currentUser.email);
+        setPhone(currentUser.phone || "");
         setAuthStatus("authenticated");
         loadOrders();
       }
@@ -339,13 +349,51 @@ export default function AccountPage() {
     }
   };
 
-  const handleUpdateProfile = (e: React.FormEvent) => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim()) return setProfileError("Please enter your first and last name.");
     if (!email.trim()) return setProfileError("Please enter your email address.");
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setProfileError("Please enter a valid email address.");
+    if (!/^[+()\-. \d]{7,}$/.test(phone.trim())) return setProfileError("Please enter a valid phone number.");
     setProfileError(null);
-    showToast("Profile information updated successfully! ✨");
+    setProfileSaving(true);
+
+    try {
+      const response = await fetch("/api/account/profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          phone,
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to update your profile.");
+      }
+
+      const updatedUser: AuthUser = {
+        ...payload.user,
+        phone: phone.trim(),
+      };
+
+      setCurrentUser(updatedUser);
+      setAuthUser(updatedUser);
+      setFirstName(updatedUser.firstName);
+      setLastName(updatedUser.lastName);
+      setEmail(updatedUser.email);
+      setPhone(updatedUser.phone || "");
+      setActiveTab("orders");
+      showToast("Profile information updated successfully!");
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : "Unable to update your profile.");
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   const handleDeleteAddress = (id: string) => {
@@ -610,6 +658,94 @@ export default function AccountPage() {
     );
   }
 
+  const isProfileIncomplete = !firstName.trim() || !lastName.trim() || !phone.trim();
+
+  if (isProfileIncomplete) {
+    return (
+      <main className="min-h-screen bg-background py-16 md:py-24 px-4 md:px-16">
+        <section className="max-w-2xl mx-auto bg-white border border-outline-variant/60 rounded-2xl p-8 md:p-10 shadow-sm">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6">
+            <User className="w-7 h-7" />
+          </div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-primary mb-3">Complete your profile</p>
+          <h1 className="text-3xl md:text-4xl font-black font-heading text-on-surface tracking-tight">
+            Add your personal information
+          </h1>
+          <p className="text-sm md:text-base text-on-surface-variant font-medium leading-relaxed mt-4">
+            Please add your first name, last name, and phone number before continuing to your Don Perro account.
+          </p>
+
+          <form onSubmit={handleUpdateProfile} noValidate className="mt-8 space-y-4">
+            <FormNotice message={profileError} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label htmlFor="required-first-name" className="text-xs font-bold text-secondary">First Name</label>
+                <input
+                  id="required-first-name"
+                  type="text"
+                  required
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none transition-colors"
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="required-last-name" className="text-xs font-bold text-secondary">Last Name</label>
+                <input
+                  id="required-last-name"
+                  type="text"
+                  required
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label htmlFor="required-email" className="text-xs font-bold text-secondary">Email Address</label>
+                <input
+                  id="required-email"
+                  type="email"
+                  value={email}
+                  readOnly
+                  className="w-full bg-surface-container-low border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-secondary outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="required-phone" className="text-xs font-bold text-secondary">Phone Number</label>
+                <input
+                  id="required-phone"
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none transition-colors"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={profileSaving}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-on-primary shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {profileSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving Profile...
+                </>
+              ) : (
+                "Continue to Account"
+              )}
+            </button>
+          </form>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-background py-12 md:py-20 px-4 md:px-16 max-w-7xl mx-auto">
       
@@ -634,7 +770,7 @@ export default function AccountPage() {
         <aside className="w-full md:w-64 flex-shrink-0">
           <div className="mb-8">
             <h1 className="text-2xl font-black font-heading tracking-tight text-on-surface">My Account</h1>
-            <p className="text-sm text-secondary font-medium mt-1">Welcome back, {authUser?.firstName ?? firstName}</p>
+            <p className="text-sm text-secondary font-medium mt-1">Welcome back, {authUser?.firstName || firstName}</p>
           </div>
 
           <nav className="flex flex-row md:flex-col overflow-x-auto md:overflow-visible gap-2 md:gap-1.5 pb-4 md:pb-0 border-b border-outline-variant/20 md:border-b-0">
@@ -993,14 +1129,15 @@ export default function AccountPage() {
                         type="email"
                         required
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none transition-colors"
+                        readOnly
+                        className="w-full bg-surface-container-low border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-secondary outline-none"
                       />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-secondary">Phone Number</label>
                       <input
                         type="tel"
+                        required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none transition-colors"
@@ -1024,9 +1161,17 @@ export default function AccountPage() {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      className="px-6 py-3 rounded-full bg-primary text-on-primary font-bold text-xs shadow-md shadow-primary/10 hover:shadow-lg active:scale-95 transition-all outline-none cursor-pointer"
+                      disabled={profileSaving}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-primary text-on-primary font-bold text-xs shadow-md shadow-primary/10 hover:shadow-lg active:scale-95 transition-all outline-none cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                     >
-                      Save Changes
+                      {profileSaving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Changes"
+                      )}
                     </button>
                   </div>
                 </form>

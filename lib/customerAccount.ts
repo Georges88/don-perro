@@ -8,6 +8,11 @@ export interface CustomerAccountUser {
   email: string;
 }
 
+export interface CustomerAccountProfileInput {
+  firstName: string;
+  lastName: string;
+}
+
 export interface CustomerAccountOrder {
   id: string;
   name: string;
@@ -60,6 +65,19 @@ interface CustomerQueryResponse {
       emailAddress?: string | null;
     } | null;
   } | null;
+}
+
+interface CustomerUpdateResponse {
+  customerUpdate: {
+    customer: {
+      firstName?: string | null;
+      lastName?: string | null;
+      emailAddress?: {
+        emailAddress?: string | null;
+      } | null;
+    } | null;
+    userErrors: Array<{ field?: string[] | null; message: string }>;
+  };
 }
 
 interface CustomerOrdersQueryResponse {
@@ -230,8 +248,74 @@ export async function getCustomerAccountUser(accessToken: string): Promise<Custo
   }
 
   return {
-    firstName: customer.firstName || "Don",
-    lastName: customer.lastName || "Perro",
+    firstName: customer.firstName || "",
+    lastName: customer.lastName || "",
+    email,
+  };
+}
+
+export async function updateCustomerAccountProfile(
+  accessToken: string,
+  input: CustomerAccountProfileInput,
+): Promise<CustomerAccountUser> {
+  const { domain } = getCustomerAccountConfig();
+  const apiConfig = await getCustomerAccountApiConfiguration(domain);
+  const mutation = `#graphql
+    mutation UpdateCustomerProfile($input: CustomerUpdateInput!) {
+      customerUpdate(input: $input) {
+        userErrors {
+          field
+          message
+        }
+        customer {
+          firstName
+          lastName
+          emailAddress {
+            emailAddress
+          }
+        }
+      }
+    }
+  `;
+
+  const response = await fetch(apiConfig.graphql_api, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: accessToken,
+    },
+    body: JSON.stringify({
+      query: mutation,
+      variables: {
+        input: {
+          firstName: input.firstName,
+          lastName: input.lastName,
+        },
+      },
+    }),
+    cache: "no-store",
+  });
+
+  const payload = (await response.json()) as GraphQLResponse<CustomerUpdateResponse>;
+  if (!response.ok || hasShopifyErrors(payload.errors) || !payload.data?.customerUpdate) {
+    const details = formatShopifyErrors(payload.errors) || response.statusText;
+    throw new Error(`Unable to update Shopify customer profile: ${details}`);
+  }
+
+  const result = payload.data.customerUpdate;
+  if (result.userErrors.length) {
+    throw new Error(result.userErrors.map((error) => error.message).join(" "));
+  }
+
+  const customer = result.customer;
+  const email = customer?.emailAddress?.emailAddress;
+  if (!customer || !email) {
+    throw new Error("Shopify did not return the updated customer profile.");
+  }
+
+  return {
+    firstName: customer.firstName || "",
+    lastName: customer.lastName || "",
     email,
   };
 }
