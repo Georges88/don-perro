@@ -51,12 +51,12 @@ export default function TrackOrderView() {
     loadOrders();
   }, []);
 
-  const normalizedQuery = query.trim().replace(/^#/, "").toLowerCase();
+  const normalizedQuery = normalizeOrderNumber(query).toLowerCase();
   const selectedOrder = useMemo(() => {
     if (!normalizedQuery) return orders[0] || null;
 
     return orders.find((order) => {
-      const orderId = order.id.replace(/^#/, "").toLowerCase();
+      const orderId = normalizeOrderNumber(order.id).toLowerCase();
       return orderId === normalizedQuery || orderId.includes(normalizedQuery);
     }) || null;
   }, [normalizedQuery, orders]);
@@ -124,7 +124,7 @@ export default function TrackOrderView() {
               setQuery(event.target.value);
               setSearchAttempted(false);
             }}
-            placeholder={orders[0] ? `Order number, e.g. ${orders[0].id}` : "Order number"}
+            placeholder={orders[0] ? `Order number, e.g. ${displayOrderNumber(orders[0].id)}` : "Order number"}
             className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm font-bold text-on-surface outline-none transition-colors focus:border-primary"
           />
           <button
@@ -153,7 +153,7 @@ export default function TrackOrderView() {
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-secondary">Order Number</p>
-                <h2 className="mt-1 font-heading text-3xl font-black text-on-surface">#{selectedOrder.id}</h2>
+                <h2 className="mt-1 font-heading text-3xl font-black text-on-surface">{displayOrderNumber(selectedOrder.id)}</h2>
                 <p className="mt-2 text-sm font-medium text-secondary">{selectedOrder.title}</p>
               </div>
               <StatusBadge status={getDisplayStatus(selectedOrder)} />
@@ -235,6 +235,14 @@ function getDisplayStatus(order: TrackableOrder) {
   if (financial === "PAID") return "Paid";
 
   return formatRawStatus(fulfillment || financial);
+}
+
+function normalizeOrderNumber(orderId: string) {
+  return orderId.trim().replace(/^#+/, "");
+}
+
+function displayOrderNumber(orderId: string) {
+  return `#${normalizeOrderNumber(orderId)}`;
 }
 
 function formatRawStatus(status: string) {

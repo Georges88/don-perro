@@ -113,7 +113,9 @@ interface CustomerOrdersQueryResponse {
         } | null;
         lineItems?: {
           nodes: Array<{
+            id?: string | null;
             title?: string | null;
+            variantTitle?: string | null;
             quantity?: number | null;
             price?: {
               amount: string;
@@ -121,6 +123,7 @@ interface CustomerOrdersQueryResponse {
             } | null;
             image?: {
               url?: string | null;
+              altText?: string | null;
             } | null;
             merchandise?: {
               id?: string | null;
@@ -427,9 +430,11 @@ export async function getCustomerAccountOrders(accessToken: string): Promise<Cus
               amount
               currencyCode
             }
-            lineItems(first: 5) {
+            lineItems(first: 20) {
               nodes {
+                id
                 title
+                variantTitle
                 quantity
                 price {
                   amount
@@ -437,26 +442,7 @@ export async function getCustomerAccountOrders(accessToken: string): Promise<Cus
                 }
                 image {
                   url
-                }
-                merchandise {
-                  ... on ProductVariant {
-                    id
-                    title
-                    availableForSale
-                    product {
-                      id
-                      title
-                      handle
-                      description
-                      vendor
-                      productType
-                      tags
-                      featuredImage {
-                        url
-                        altText
-                      }
-                    }
-                  }
+                  altText
                 }
               }
             }
@@ -534,19 +520,18 @@ function mapCustomerOrders(payload: GraphQLResponse<CustomerOrdersQueryResponse>
       title: firstItem?.title || "Don Perro order",
       imageUrl: firstItem?.image?.url || "/images/product-placeholder.svg",
       lineItems: lineItems.map((item) => {
-        const merchandise = "merchandise" in item ? item.merchandise : null;
-        const product = merchandise && "product" in merchandise ? merchandise.product : null;
-        const imageUrl = item.image?.url || product?.featuredImage?.url || "/images/product-placeholder.svg";
+        const imageUrl = item.image?.url || "/images/product-placeholder.svg";
+        const title = item.title || "Don Perro product";
 
         return {
-          title: item.title || product?.title || "Don Perro product",
+          title,
           quantity: item.quantity || 1,
-          merchandiseId: merchandise && "id" in merchandise ? merchandise.id : "",
-          variantTitle: merchandise && "title" in merchandise ? merchandise.title : "Default",
+          merchandiseId: item.id || `${order.id}-${title}`,
+          variantTitle: item.variantTitle || "Default",
           price: formatMoney(item.price?.amount, item.price?.currencyCode),
           imageUrl,
         };
-      }).filter((item) => item.merchandiseId),
+      }),
     };
   });
 }
