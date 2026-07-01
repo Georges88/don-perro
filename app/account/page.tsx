@@ -65,12 +65,6 @@ const emptyAddressForm: Omit<Address, "id"> = {
   phone: ""
 };
 
-interface TrackingStep {
-  title: string;
-  date: string;
-  done: boolean;
-}
-
 interface OrderDetails {
   payment: string;
   shippingAddress: string;
@@ -91,7 +85,6 @@ interface Order {
   badgeColor: string;
   isCancelled?: boolean;
   cancelReason?: string;
-  trackingSteps?: TrackingStep[];
   details?: OrderDetails;
   lineItems?: OrderLineItem[];
 }
@@ -126,7 +119,6 @@ export default function AccountPage() {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   
   // Modals / Detail actions state
-  const [trackingOrder, setTrackingOrder] = useState<string | null>(null);
   const [viewingReason, setViewingReason] = useState<string | null>(null);
   const [reviewingOrder, setReviewingOrder] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState<number>(5);
@@ -263,12 +255,6 @@ export default function AccountPage() {
       status: "Shipped",
       imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBRpYchBjEfs_ivrd8Lga0LKuiFdXscx1QHTfCFvxqDXHWXg5ipaYzPwPWLs7HXblZQM0uqXb7R9vQH5Apkwq668_7CDkl3kQtZPT9cT2uxOMeLeUA9IaSSmR51gNmRnrw5ChPBEUND3Q-fvqSyElPkMf0NOsrbGSTUeYfxPCY7vM9ng-YkG6OjhvQVZAOer53ZG3JmVP7K_aEijv3v4mPdD8lICKnFedbJta70ky_Tx9m9aJV1kjGyrVTQoP4YM3z_c2CUvcK73U0S",
       badgeColor: "bg-tertiary-fixed text-on-tertiary-fixed",
-      trackingSteps: [
-        { title: "Ordered & Processed", date: "Oct 12, 2023 - 09:15 AM", done: true },
-        { title: "Fulfilled & Packaged", date: "Oct 12, 2023 - 04:30 PM", done: true },
-        { title: "In Transit near Oakland Facility", date: "Oct 13, 2023 - 10:20 AM", done: true },
-        { title: "Out for Delivery", date: "Expected Oct 15, 2023", done: false }
-      ],
       details: {
         payment: "Visa/ShopPay (ending in 4820)",
         shippingAddress: "1248 Sagamore Terrace, Suite B, Los Angeles, CA 90025",
@@ -980,12 +966,12 @@ export default function AccountPage() {
                             <div className="flex flex-wrap gap-2">
                               {order.status === "Shipped" && (
                                 <>
-                                  <button
-                                    onClick={() => setTrackingOrder(order.id)}
+                                  <Link
+                                    href={`/track-order?id=${encodeURIComponent(order.id)}`}
                                     className="px-5 py-2 rounded-full bg-primary text-on-primary font-bold text-xs shadow-md shadow-primary/10 hover:shadow-lg active:scale-95 transition-all outline-none cursor-pointer"
                                   >
-                                    Track Package
-                                  </button>
+                                    View Status
+                                  </Link>
                                   <button
                                     onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
                                     className="px-5 py-2 rounded-full border border-secondary text-secondary font-bold text-xs hover:bg-secondary-container/20 transition-all outline-none cursor-pointer"
@@ -1524,89 +1510,7 @@ export default function AccountPage() {
         </section>
 
       </div>
-
-      {/* MODAL 1: TRACKING MAP DETAIL ACTION MODAL */}
-      <AnimatePresence>
-        {trackingOrder && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg bg-white rounded-3xl overflow-hidden shadow-2xl border border-outline-variant/30"
-            >
-              <div className="bg-surface px-6 py-5 border-b border-outline-variant/30 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Package className="w-5 h-5 text-primary" />
-                  <h3 className="text-base font-black font-heading text-on-surface">Artisan Track Route</h3>
-                </div>
-                <button
-                  onClick={() => setTrackingOrder(null)}
-                  className="p-1 rounded-full text-secondary hover:text-on-surface hover:bg-secondary-container/30 transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-6">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-xs font-bold text-secondary uppercase tracking-wider">Tracking Reference</p>
-                    <p className="text-sm font-mono font-black text-on-surface mt-0.5">DP-TRK-92841-A8</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs font-bold text-secondary uppercase tracking-wider font-sans">Provider</p>
-                    <p className="text-sm font-black text-primary mt-0.5">Don Perro Elite Cargo</p>
-                  </div>
-                </div>
-
-                {/* Vertical tracking step indicator */}
-                <div className="space-y-6 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[2px] before:bg-outline-variant/40">
-                  {baseOrders[0].trackingSteps?.map((step, idx) => (
-                    <div key={idx} className="flex gap-4 relative">
-                      <div className={`w-6.5 h-6.5 rounded-full border-2 flex items-center justify-center z-10 font-sans ${
-                        step.done 
-                          ? "bg-primary border-primary text-on-primary" 
-                          : "bg-white border-outline-variant text-secondary"
-                      }`}>
-                        {step.done ? (
-                          <Check className="w-3.5 h-3.5 stroke-[3.5]" />
-                        ) : (
-                          <Clock className="w-3.5 h-3.5" />
-                        )}
-                      </div>
-                      <div className="space-y-0.5">
-                        <p className={`text-xs font-bold select-none leading-none ${step.done ? "text-on-surface" : "text-secondary font-semibold"}`}>
-                          {step.title}
-                        </p>
-                        <p className="text-xxs font-mono text-secondary/70">{step.date}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="p-4 bg-primary-container/10 border border-primary/15 rounded-2xl flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                  <p className="text-xxs font-medium font-sans text-on-primary-container leading-relaxed">
-                    Premium live map grounding is synchronized directly with dispatch center coordinates. Real-time courier details are available on active Shopify store rollout.
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-surface px-6 py-4 border-t border-outline-variant/20 flex justify-end gap-2">
-                <button
-                  onClick={() => setTrackingOrder(null)}
-                  className="px-5 py-2 rounded-full border border-secondary text-secondary font-bold text-xs hover:bg-secondary-container/20 transition-all cursor-pointer outline-none"
-                >
-                  Close Track
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* MODAL 2: CANCELLED REASON INFO MODAL */}
+      {/* MODAL 1: CANCELLED REASON INFO MODAL */}
       <AnimatePresence>
         {viewingReason && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
