@@ -1,31 +1,58 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
-import AuthForm from "@/components/sections/AuthForm";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Acurated Community | Don Perro Login & Register",
-  description: "Join the Don Perro community of pet owners to unlock bespoke rewards, curated nutrition plans, and expert hotel suites reservations.",
-};
+type SearchParams = Record<string, string | string[] | undefined>;
 
-export default function LoginPage() {
-  return (
-    <main className="min-h-[calc(100vh-80px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-background relative overflow-hidden">
-      {/* Decorative ambient background aura spheres */}
-      <div className="absolute top-1/4 left-1/10 w-72 h-72 bg-primary-container/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/10 w-96 h-96 bg-secondary-container/20 rounded-full blur-3xl pointer-events-none" />
-      
-      {/* Centered card content */}
-      <div className="w-full max-w-5xl relative z-10 flex justify-center">
-        <Suspense fallback={<AuthFormFallback />}>
-          <AuthForm />
-        </Suspense>
-      </div>
-    </main>
-  );
+interface LoginPageProps {
+  searchParams?: Promise<SearchParams> | SearchParams;
 }
 
-function AuthFormFallback() {
-  return (
-    <div className="w-full max-w-5xl h-[720px] rounded-3xl border border-secondary/5 bg-white shadow-[0px_15px_45px_rgba(90,96,90,0.06)]" />
-  );
+export const metadata: Metadata = {
+  title: "Sign In | Don Perro",
+  description: "Sign in to your Don Perro account through Shopify.",
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams;
+  const authError = getParam(params, "auth_error");
+
+  if (authError) {
+    return (
+      <main className="min-h-[calc(100vh-80px)] flex items-center justify-center px-6 py-12 bg-background">
+        <section className="w-full max-w-md rounded-lg border border-outline-variant bg-surface p-8 text-center shadow-sm">
+          <h1 className="text-2xl font-bold font-heading text-on-surface">Shopify login is unavailable</h1>
+          <p className="mt-3 text-sm leading-6 text-secondary">{authError}</p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Link
+              href="/api/auth/login"
+              className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
+            >
+              Try Again
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center rounded-full border border-outline-variant px-5 py-3 text-sm font-bold text-secondary transition hover:text-primary"
+            >
+              Back Home
+            </Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  const returnTo = getParam(params, "returnTo") || getParam(params, "return_to");
+  const query = new URLSearchParams();
+
+  if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
+    query.set("return_to", returnTo);
+  }
+
+  redirect(`/api/auth/login${query.size ? `?${query.toString()}` : ""}`);
+}
+
+function getParam(params: SearchParams | undefined, key: string) {
+  const value = params?.[key];
+  return Array.isArray(value) ? value[0] : value;
 }
