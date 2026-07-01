@@ -10,8 +10,6 @@ import {
   ChevronRight, 
   Eye, 
   ShoppingCart, 
-  CheckSquare, 
-  Square, 
   SlidersHorizontal,
   Plus,
   Minus,
@@ -45,8 +43,8 @@ export default function SearchResults({ products }: SearchResultsProps) {
   // Price Range
   const [priceLimit, setPriceLimit] = useState<number>(150);
 
-  // Health Goals (Organic, Grain-Free, Sensitive Stomach)
-  const [healthGoals, setHealthGoals] = useState<string[]>([]);
+  // Availability
+  const [inStockOnly, setInStockOnly] = useState<boolean>(false);
 
   // Sort State
   const [sortBy, setSortBy] = useState<string>("Best Selling");
@@ -87,18 +85,10 @@ export default function SearchResults({ products }: SearchResultsProps) {
     };
   }, [searchParams]);
 
-  // Toggle health goals
-  const toggleHealthGoal = (goal: string) => {
-    setHealthGoals(prev => 
-      prev.includes(goal) ? prev.filter(g => g !== goal) : [...prev, goal]
-    );
-    setCurrentPage(1);
-  };
-
   // Clear all filters
   const clearAllFilters = () => {
-    setHealthGoals([]);
     setPriceLimit(150);
+    setInStockOnly(false);
     setCurrentPage(1);
   };
 
@@ -113,18 +103,10 @@ export default function SearchResults({ products }: SearchResultsProps) {
     const price = parseFloat(product.priceRange.minVariantPrice.amount);
     if (price > priceLimit) return false;
 
-    // 4. Health Goals
-    // Organic maps to "organic" tag
-    // Grain-Free maps to "grain-free" tag
-    // Sensitive Stomach maps to "sensitive-stomach" tag
-    if (healthGoals.length > 0) {
-      const hasAllSelectedGoals = healthGoals.every(goal => {
-        if (goal === "Organic") return product.tags.includes("organic");
-        if (goal === "Grain-Free") return product.tags.includes("grain-free");
-        if (goal === "Sensitive Stomach") return product.tags.includes("sensitive-stomach");
-        return true;
-      });
-      if (!hasAllSelectedGoals) return false;
+    // 4. Availability Filter
+    if (inStockOnly) {
+      const hasAvailableVariant = product.variants.some((variant) => variant.availableForSale);
+      if (!hasAvailableVariant) return false;
     }
 
     return true;
@@ -321,20 +303,22 @@ export default function SearchResults({ products }: SearchResultsProps) {
 
         {/* Active Filter Pill Badges */}
         <div className="flex flex-wrap items-center gap-2 text-xs mt-6">
-          {healthGoals.length > 0 && (
+          {inStockOnly && (
             <span className="text-secondary font-semibold mr-1">Active filters:</span>
           )}
-          {healthGoals.map(goal => (
+          {inStockOnly && (
             <button
-              key={goal}
-              onClick={() => toggleHealthGoal(goal)}
+              onClick={() => {
+                setInStockOnly(false);
+                setCurrentPage(1);
+              }}
               className="bg-secondary-container text-on-secondary-container hover:bg-secondary-container/80 transition-colors px-3 py-1 rounded-full font-medium flex items-center gap-1 cursor-pointer select-none"
             >
-              {goal}
+              In Stock
               <X className="w-3 h-3 text-[#5a605a] ml-0.5" />
             </button>
-          ))}
-          {(healthGoals.length > 0 || priceLimit < 150) && (
+          )}
+          {(inStockOnly || priceLimit < 150) && (
             <button 
               onClick={clearAllFilters}
               className="text-primary font-bold hover:underline transition-all ml-1 text-xs cursor-pointer"
@@ -378,39 +362,25 @@ export default function SearchResults({ products }: SearchResultsProps) {
           {/* Divider */}
           <div className="h-px bg-outline-variant/20" />
 
-          {/* Health Goals */}
-          <div id="filter-health-section">
+          {/* Availability */}
+          <div id="filter-availability-section">
             <h3 className="text-xs font-bold uppercase tracking-widest text-[#191c1c] mb-4">
-              Health Goal
+              Availability
             </h3>
-            <div className="space-y-3">
-              {[
-                { name: "Organic", label: "Organic" },
-                { name: "Grain-Free", label: "Grain-Free" },
-                { name: "Sensitive Stomach", label: "Sensitive Stomach" }
-              ].map(goal => {
-                const isChecked = healthGoals.includes(goal.name);
-                return (
-                  <label 
-                    key={goal.name}
-                    className="flex items-center gap-2.5 cursor-pointer text-sm text-secondary hover:text-on-surface transition-colors select-none font-medium"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleHealthGoal(goal.name)}
-                      className="text-primary focus:outline-none"
-                    >
-                      {isChecked ? (
-                        <CheckSquare className="w-5 h-5 text-primary fill-primary-container/20" />
-                      ) : (
-                        <Square className="w-5 h-5 text-outline/40" />
-                      )}
-                    </button>
-                    <span className={isChecked ? "text-on-surface font-semibold" : ""}>{goal.label}</span>
-                  </label>
-                );
-              })}
-            </div>
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input 
+                type="checkbox"
+                checked={inStockOnly}
+                onChange={() => {
+                  setInStockOnly(!inStockOnly);
+                  setCurrentPage(1);
+                }}
+                className="rounded border-outline/30 text-primary focus:ring-primary h-4.5 w-4.5"
+              />
+              <span className="text-sm text-secondary group-hover:text-primary transition-colors font-sans font-medium">
+                In Stock Only
+              </span>
+            </label>
           </div>
 
         </aside>
