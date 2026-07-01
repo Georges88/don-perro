@@ -400,7 +400,13 @@ async function saveCustomerPhoneMetafield(
 
   const result = payload.data.metafieldsSet;
   if (result.userErrors.length) {
-    throw new Error(result.userErrors.map((error) => error.message).join(" "));
+    const message = result.userErrors.map((error) => error.message).join(" ");
+    if (message.toLowerCase().includes("access to this namespace and key")) {
+      throw new Error(
+        "Shopify is not allowing this app to save the customer phone field yet. Create/enable the app-owned customer metafield definition for key phone, then try again.",
+      );
+    }
+    throw new Error(message);
   }
 }
 

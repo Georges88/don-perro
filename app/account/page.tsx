@@ -36,6 +36,10 @@ type TabType = "profile" | "addresses" | "orders" | "wishlist";
 type OrderFilter = "6months" | "thisyear" | "all";
 const phonePattern = /^[+()\-. \d]{7,}$/;
 
+function hasCompleteCustomerProfile(user: AuthUser) {
+  return Boolean(user.firstName.trim() && user.lastName.trim() && phonePattern.test((user.phone || "").trim()));
+}
+
 interface Address {
   id: string;
   name: string;
@@ -136,6 +140,7 @@ export default function AccountPage() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [requiresProfileCompletion, setRequiresProfileCompletion] = useState(false);
 
   // Address State
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -178,6 +183,7 @@ export default function AccountPage() {
         setLastName(currentUser.lastName);
         setEmail(currentUser.email);
         setPhone(currentUser.phone || "");
+        setRequiresProfileCompletion(!hasCompleteCustomerProfile(currentUser));
         setAuthStatus("authenticated");
         loadOrders();
       } catch (error) {
@@ -202,6 +208,7 @@ export default function AccountPage() {
         setLastName(currentUser.lastName);
         setEmail(currentUser.email);
         setPhone(currentUser.phone || "");
+        setRequiresProfileCompletion(!hasCompleteCustomerProfile(currentUser));
         setAuthStatus("authenticated");
         loadOrders();
       }
@@ -400,7 +407,10 @@ export default function AccountPage() {
       setLastName(updatedUser.lastName);
       setEmail(updatedUser.email);
       setPhone(updatedUser.phone || "");
-      setActiveTab("orders");
+      if (requiresProfileCompletion) {
+        setRequiresProfileCompletion(false);
+        setActiveTab("orders");
+      }
       showToast("Profile information updated successfully!");
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : "Unable to update your profile.");
@@ -671,9 +681,7 @@ export default function AccountPage() {
     );
   }
 
-  const isProfileIncomplete = !firstName.trim() || !lastName.trim() || !phonePattern.test(phone.trim());
-
-  if (isProfileIncomplete) {
+  if (requiresProfileCompletion) {
     return (
       <main className="min-h-screen bg-background py-16 md:py-24 px-4 md:px-16">
         <section className="max-w-2xl mx-auto bg-white border border-outline-variant/60 rounded-2xl p-8 md:p-10 shadow-sm">
