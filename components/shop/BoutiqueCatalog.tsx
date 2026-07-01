@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { Collection, Product, ShopifyImage } from "@/types/shopify";
+import { Collection, Product } from "@/types/shopify";
 import { getWishlist, toggleWishlist } from "@/lib/wishlist";
 import { getDefaultVariant, getSelectedVariantAmount, hasVariantPriceRange } from "@/lib/pricing";
 
@@ -29,36 +29,6 @@ interface BoutiqueCatalogProps {
   initialProducts: Product[];
   initialCollections: Collection[];
 }
-
-interface SubcategoryCard {
-  title: string;
-  type: string;
-  tag: string;
-  handle: string;
-}
-
-const CATEGORY_GROUPS: Record<string, { title: string; intro: string; subcategories: SubcategoryCard[] }> = {
-  dog: {
-    title: "Dogs",
-    intro: "Browse essentials by dog food, treats, toys, and accessories.",
-    subcategories: [
-      { title: "Dog Food", type: "Organic Food", tag: "food", handle: "dog-food" },
-      { title: "Dog Treats", type: "Treats", tag: "treats", handle: "dog-treats" },
-      { title: "Dog Toys", type: "Interactive Toys", tag: "toys", handle: "dog-toys" },
-      { title: "Dog Accessories", type: "Accessories", tag: "accessories", handle: "dog-accessories" },
-    ],
-  },
-  cat: {
-    title: "Cats",
-    intro: "Browse essentials by cat food, treats, toys, and accessories.",
-    subcategories: [
-      { title: "Cat Food", type: "Organic Food", tag: "food", handle: "cat-food" },
-      { title: "Cat Treats", type: "Treats", tag: "treats", handle: "cat-treats" },
-      { title: "Cat Toys", type: "Interactive Toys", tag: "toys", handle: "cat-toys" },
-      { title: "Cat Accessories", type: "Accessories", tag: "accessories", handle: "cat-accessories" },
-    ],
-  },
-};
 
 const PRODUCT_TYPE_OPTIONS = [
   "Organic Food",
@@ -69,7 +39,7 @@ const PRODUCT_TYPE_OPTIONS = [
   "Beds & Comfort",
 ];
 
-function BoutiqueCatalogContent({ initialProducts, initialCollections }: BoutiqueCatalogProps) {
+function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   const searchParams = useSearchParams();
 
   // ----------------------------------------------------
@@ -154,21 +124,6 @@ function BoutiqueCatalogContent({ initialProducts, initialCollections }: Boutiqu
     if (product.tags.includes("toys") || product.tags.includes("rope")) return "TOYS";
     if (product.tags.includes("grooming") || product.tags.includes("brush")) return "GROOMING";
     return "ESSENTIALS";
-  };
-
-  const activeCategoryKey = selectedCategories.length === 1 ? selectedCategories[0] : null;
-  const activeCategoryGroup = activeCategoryKey ? CATEGORY_GROUPS[activeCategoryKey] : undefined;
-
-  const getSubcategoryProducts = (subcategory: SubcategoryCard) => {
-    return initialProducts.filter((product) => {
-      if (activeCategoryKey && !product.tags.includes(activeCategoryKey)) return false;
-      return product.tags.includes(subcategory.tag) || product.productType === subcategory.type;
-    });
-  };
-
-  const getSubcategoryImage = (subcategory: SubcategoryCard): ShopifyImage | undefined => {
-    const collectionImage = initialCollections.find((collection) => collection.handle === subcategory.handle)?.image;
-    return collectionImage || getSubcategoryProducts(subcategory)[0]?.featuredImage;
   };
 
   // Toggle Category Checkboxes
@@ -433,67 +388,6 @@ function BoutiqueCatalogContent({ initialProducts, initialCollections }: Boutiqu
             </button>
           </div>
         </div>
-
-        {activeCategoryGroup && (
-          <section className="mb-10">
-            <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="font-heading text-2xl font-bold text-on-background">
-                  Shop {activeCategoryGroup.title}
-                </h2>
-                <p className="mt-1 text-sm text-secondary">
-                  {activeCategoryGroup.intro}
-                </p>
-              </div>
-              {selectedTypes.length > 0 && (
-                <Link
-                  href={`/shop?category=${activeCategoryKey}`}
-                  className="text-xs font-bold text-primary transition-colors hover:text-[#504700]"
-                >
-                  View all {activeCategoryGroup.title}
-                </Link>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              {activeCategoryGroup.subcategories.map((subcategory) => {
-                const image = getSubcategoryImage(subcategory);
-                const products = getSubcategoryProducts(subcategory);
-                const isActive = selectedTypes.includes(subcategory.type);
-
-                return (
-                  <Link
-                    key={subcategory.handle}
-                    href={`/shop?category=${activeCategoryKey}&type=${encodeURIComponent(subcategory.type)}`}
-                    className={`group relative aspect-[4/3] overflow-hidden rounded-2xl border bg-surface-container-high shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(90,96,90,0.08)] ${
-                      isActive ? "border-primary ring-2 ring-primary/15" : "border-outline/10"
-                    }`}
-                  >
-                    {image ? (
-                      <img
-                        src={image.url}
-                        alt={image.altText || subcategory.title}
-                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-surface-container" />
-                    )}
-                    <div className="absolute inset-0 bg-black/25 transition-colors duration-300 group-hover:bg-black/35" />
-                    <div className="absolute inset-x-4 bottom-4 z-10">
-                      <h3 className="font-heading text-lg font-bold text-white">
-                        {subcategory.title}
-                      </h3>
-                      <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-white/85">
-                        {products.length} {products.length === 1 ? "item" : "items"}
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
 
         {/* Catalog Two-Column Grid */}
         <div className="flex flex-col md:flex-row gap-8">
