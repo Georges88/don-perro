@@ -6,11 +6,13 @@ export interface CustomerAccountUser {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
 }
 
 export interface CustomerAccountProfileInput {
   firstName: string;
   lastName: string;
+  phone: string;
 }
 
 export interface CustomerAccountOrder {
@@ -59,10 +61,14 @@ interface GraphQLResponse<T> {
 
 interface CustomerQueryResponse {
   customer: {
+    id: string;
     firstName?: string | null;
     lastName?: string | null;
     emailAddress?: {
       emailAddress?: string | null;
+    } | null;
+    metafield?: {
+      value?: string | null;
     } | null;
   } | null;
 }
@@ -70,12 +76,24 @@ interface CustomerQueryResponse {
 interface CustomerUpdateResponse {
   customerUpdate: {
     customer: {
+      id: string;
       firstName?: string | null;
       lastName?: string | null;
       emailAddress?: {
         emailAddress?: string | null;
       } | null;
     } | null;
+    userErrors: Array<{ field?: string[] | null; message: string }>;
+  };
+}
+
+interface MetafieldsSetResponse {
+  metafieldsSet: {
+    metafields: Array<{
+      namespace: string;
+      key: string;
+      value: string;
+    }> | null;
     userErrors: Array<{ field?: string[] | null; message: string }>;
   };
 }
@@ -216,10 +234,14 @@ export async function getCustomerAccountUser(accessToken: string): Promise<Custo
   const query = `#graphql
     query CurrentCustomer {
       customer {
+        id
         firstName
         lastName
         emailAddress {
           emailAddress
+        }
+        metafield(namespace: "don_perro", key: "phone") {
+          value
         }
       }
     }
@@ -251,6 +273,7 @@ export async function getCustomerAccountUser(accessToken: string): Promise<Custo
     firstName: customer.firstName || "",
     lastName: customer.lastName || "",
     email,
+    phone: customer.metafield?.value || "",
   };
 }
 
@@ -268,6 +291,7 @@ export async function updateCustomerAccountProfile(
           message
         }
         customer {
+          id
           firstName
           lastName
           emailAddress {
@@ -313,11 +337,71 @@ export async function updateCustomerAccountProfile(
     throw new Error("Shopify did not return the updated customer profile.");
   }
 
+  await saveCustomerPhoneMetafield(apiConfig.graphql_api, accessToken, customer.id, input.phone);
+
   return {
     firstName: customer.firstName || "",
     lastName: customer.lastName || "",
     email,
+    phone: input.phone,
   };
+}
+
+async function saveCustomerPhoneMetafield(
+  graphqlApi: string,
+  accessToken: string,
+  customerId: string,
+  phone: string,
+) {
+  const mutation = `#graphql
+    mutation SaveCustomerPhone($metafields: [MetafieldsSetInput!]!) {
+      metafieldsSet(metafields: $metafields) {
+        metafields {
+          namespace
+          key
+          value
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const response = await fetch(graphqlApi, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: accessToken,
+    },
+    body: JSON.stringify({
+      query: mutation,
+      variables: {
+        metafields: [
+          {
+            ownerId: customerId,
+            namespace: "don_perro",
+            key: "phone",
+            type: "single_line_text_field",
+            value: phone,
+          },
+        ],
+      },
+    }),
+    cache: "no-store",
+  });
+
+  const payload = (await response.json()) as GraphQLResponse<MetafieldsSetResponse>;
+  if (!response.ok || hasShopifyErrors(payload.errors) || !payload.data?.metafieldsSet) {
+    const details = formatShopifyErrors(payload.errors) || response.statusText;
+    throw new Error(`Unable to save customer phone number: ${details}`);
+  }
+
+  const result = payload.data.metafieldsSet;
+  if (result.userErrors.length) {
+    throw new Error(result.userErrors.map((error) => error.message).join(" "));
+  }
 }
 
 export async function getCustomerAccountOrders(accessToken: string): Promise<CustomerAccountOrder[]> {

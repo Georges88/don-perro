@@ -162,7 +162,7 @@ export default function AccountPage() {
               ...shopifyUser,
               firstName: shopifyUser.firstName || savedProfile?.firstName || "",
               lastName: shopifyUser.lastName || savedProfile?.lastName || "",
-              phone: savedProfile?.phone || "",
+              phone: shopifyUser.phone || savedProfile?.phone || "",
             }
           : sessionUser;
 

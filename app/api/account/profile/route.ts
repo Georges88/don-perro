@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Please enter a valid phone number." }, { status: 400 });
     }
 
-    const customer = await updateCustomerAccountProfile(accessToken, { firstName, lastName });
+    const customer = await updateCustomerAccountProfile(accessToken, { firstName, lastName, phone });
 
     return NextResponse.json({
       user: {
