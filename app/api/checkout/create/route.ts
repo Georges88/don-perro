@@ -43,10 +43,36 @@ function normalizeCheckoutAddress(value: unknown): ShopifyCheckoutAddressPrefere
   return {
     firstName: typeof address.firstName === "string" ? address.firstName.trim() : undefined,
     lastName: typeof address.lastName === "string" ? address.lastName.trim() : undefined,
-    phone: typeof address.phone === "string" ? address.phone.trim() : undefined,
+    phone: typeof address.phone === "string" ? normalizeCheckoutPhone(address.phone) : undefined,
     address1,
     address2: typeof address.address2 === "string" ? address.address2.trim() : undefined,
     city,
     country: typeof address.country === "string" ? address.country.trim() : "Lebanon",
   };
+}
+
+function normalizeCheckoutPhone(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  const compact = trimmed.replace(/[()\-\s.]/g, "");
+  if (/^\+\d{8,15}$/.test(compact)) return compact;
+  if (/^00\d{8,15}$/.test(compact)) return `+${compact.slice(2)}`;
+
+  const digits = compact.replace(/\D/g, "");
+  if (!digits) return undefined;
+
+  if (digits.startsWith("961") && digits.length >= 10 && digits.length <= 12) {
+    return `+${digits}`;
+  }
+
+  if (digits.startsWith("0") && digits.length >= 7 && digits.length <= 9) {
+    return `+961${digits.slice(1)}`;
+  }
+
+  if (digits.length >= 7 && digits.length <= 8) {
+    return `+961${digits}`;
+  }
+
+  return undefined;
 }
