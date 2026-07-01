@@ -1068,23 +1068,61 @@ export default function AccountPage() {
                                   <p>{formatRawStatus(order.financialStatus)}</p>
                                 </div>
                               </div>
-                              <div className="bg-surface-container-low/20 p-4 rounded-xl space-y-1.5 border border-outline-variant/20">
-                                <p className="font-bold text-on-surface mb-2">Items</p>
+                              <div className="bg-surface-container-low/20 p-4 rounded-xl border border-outline-variant/20">
+                                <p className="font-bold text-on-surface mb-3">Order Items</p>
                                 {order.lineItems?.length ? (
-                                  order.lineItems.map((item) => (
-                                    <div key={`${item.merchandiseId}-${item.variantTitle}`} className="flex justify-between gap-4">
-                                      <span>
-                                        {item.title}
-                                        {item.variantTitle && item.variantTitle !== "Default" ? ` - ${item.variantTitle}` : ""}
-                                        <span className="text-secondary/70"> x{item.quantity}</span>
-                                      </span>
-                                      <span>{item.price}</span>
-                                    </div>
-                                  ))
+                                  <div className="max-h-[320px] divide-y divide-outline-variant/10 overflow-y-auto pr-1">
+                                    {order.lineItems.map((item, index) => (
+                                      <div
+                                        key={`${item.merchandiseId}-${item.variantTitle}-${index}`}
+                                        className={`flex gap-4 ${index > 0 ? "pt-4 mt-4" : ""}`}
+                                      >
+                                        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-outline-variant/20 bg-white md:h-20 md:w-20">
+                                          <img
+                                            src={item.imageUrl || "https://picsum.photos/seed/pet-order/200/200"}
+                                            alt={item.title}
+                                            className="h-full w-full object-cover"
+                                            referrerPolicy="no-referrer"
+                                            onError={(event) => {
+                                              event.currentTarget.src = "https://picsum.photos/seed/don-perro-order/200/200";
+                                            }}
+                                          />
+                                          {item.quantity > 1 && (
+                                            <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-black text-white shadow-sm">
+                                              {item.quantity}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="flex flex-1 flex-col justify-center">
+                                          <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                              <h4 className="line-clamp-1 text-sm font-bold text-on-surface">
+                                                {item.title}
+                                              </h4>
+                                              {item.variantTitle && item.variantTitle !== "Default" && (
+                                                <p className="mt-0.5 text-[11px] font-medium text-secondary/80">
+                                                  <span className="font-bold">Size:</span> {item.variantTitle}
+                                                </p>
+                                              )}
+                                              <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary/65">
+                                                Qty: {item.quantity}
+                                              </p>
+                                            </div>
+                                            <p className="whitespace-nowrap text-xs font-bold text-primary">
+                                              {item.price}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
                                 ) : (
-                                  <p>No item details were returned by Shopify for this order yet.</p>
+                                  <div className="rounded-xl border border-dashed border-outline-variant/30 bg-white/60 p-4 text-center">
+                                    <Package className="mx-auto mb-2 h-6 w-6 text-secondary/40" />
+                                    <p>No item details were returned by Shopify for this order yet.</p>
+                                  </div>
                                 )}
-                                <div className="flex justify-between text-on-surface font-black border-t border-outline-variant/30 pt-1.5 mt-1.5 text-sm">
+                                <div className="mt-4 flex justify-between border-t border-outline-variant/30 pt-3 text-sm font-black text-on-surface">
                                   <span>Total</span>
                                   <span>{order.price}</span>
                                 </div>
