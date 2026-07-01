@@ -34,12 +34,61 @@ interface CheckoutViewProps {
 }
 
 const PENDING_CHECKOUT_KEY = "don_perro_pending_checkout";
+const ADDRESS_STORAGE_KEY = "don_perro_addresses";
+
+interface SavedAddress {
+  street?: string;
+  building?: string;
+  apartment?: string;
+  city?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+}
+
+interface CheckoutAddress {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  address1: string;
+  address2?: string;
+  city: string;
+  country: string;
+}
 
 function createCartFingerprint(items: CartItem[]) {
   return items
     .map((item) => `${item.selectedVariantId}:${item.quantity}`)
     .sort()
     .join("|");
+}
+
+function getLatestCheckoutAddress(user?: { firstName?: string; lastName?: string; phone?: string }): CheckoutAddress | undefined {
+  try {
+    const savedAddresses = localStorage.getItem(ADDRESS_STORAGE_KEY);
+    const parsed = savedAddresses ? JSON.parse(savedAddresses) : [];
+    const address = Array.isArray(parsed) ? parsed[parsed.length - 1] as SavedAddress | undefined : undefined;
+
+    if (!address) return undefined;
+
+    const street = (address.street || address.addressLine1 || "").trim();
+    const building = (address.building || address.addressLine2 || "").trim();
+    const apartment = (address.apartment || "").trim();
+    const city = (address.city || "").trim();
+
+    if (!street || !city) return undefined;
+
+    return {
+      firstName: user?.firstName,
+      lastName: user?.lastName,
+      phone: user?.phone,
+      address1: street,
+      address2: [building, apartment].filter(Boolean).join(", "),
+      city,
+      country: "Lebanon",
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
@@ -214,6 +263,15 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
     setCheckoutError(null);
 
     try {
+      let checkoutAddress: CheckoutAddress | undefined;
+      try {
+        const authResponse = await fetch("/api/auth/me", { cache: "no-store" });
+        const authPayload = authResponse.ok ? await authResponse.json() : null;
+        checkoutAddress = authPayload?.authenticated ? getLatestCheckoutAddress(authPayload.user) : getLatestCheckoutAddress();
+      } catch {
+        checkoutAddress = getLatestCheckoutAddress();
+      }
+
       const response = await fetch("/api/checkout/create", {
         method: "POST",
         headers: {
@@ -225,6 +283,7 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
             selectedVariantId: item.selectedVariantId,
             quantity: item.quantity,
           })),
+          address: checkoutAddress,
         }),
       });
       const payload = await response.json();

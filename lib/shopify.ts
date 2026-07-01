@@ -107,6 +107,16 @@ interface GraphQLResponse<T> {
   errors?: unknown;
 }
 
+export interface ShopifyCheckoutAddressPreference {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  address1: string;
+  address2?: string;
+  city: string;
+  country?: string;
+}
+
 function getShopifyConfig() {
   const domain = process.env.SHOPIFY_STORE_DOMAIN?.trim();
   const token = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN?.trim();
@@ -174,13 +184,46 @@ async function getCatalog(): Promise<CatalogResponse> {
   return shopifyFetch<CatalogResponse>(CATALOG_QUERY);
 }
 
-export async function createShopifyCart(lines: Array<{ merchandiseId: string; quantity: number }>, email?: string) {
+export async function createShopifyCart(
+  lines: Array<{ merchandiseId: string; quantity: number }>,
+  email?: string,
+  address?: ShopifyCheckoutAddressPreference,
+) {
+  const buyerIdentity: Record<string, unknown> = {};
+
+  if (email) {
+    buyerIdentity.email = email;
+  }
+
+  if (address?.phone) {
+    buyerIdentity.phone = address.phone;
+  }
+
+  if (address?.address1 && address.city) {
+    buyerIdentity.countryCode = "LB";
+    buyerIdentity.deliveryAddressPreferences = [
+      {
+        deliveryAddress: {
+          firstName: address.firstName,
+          lastName: address.lastName,
+          phone: address.phone,
+          address1: address.address1,
+          address2: address.address2,
+          city: address.city,
+          country: address.country || "Lebanon",
+        },
+        deliveryAddressValidationStrategy: "COUNTRY_CODE_ONLY",
+        oneTimeUse: true,
+      },
+    ];
+  }
+
   const data = await shopifyFetch<CartCreateResponse>(
     CART_CREATE_MUTATION,
     {
       input: {
         lines,
-        ...(email ? { buyerIdentity: { email } } : {}),
+        ...(Object.keys(buyerIdentity).length ? { buyerIdentity } : {}),
       },
     },
     0,

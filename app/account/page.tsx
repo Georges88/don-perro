@@ -60,6 +60,7 @@ const emptyAddressForm: Omit<Address, "id"> = {
   name: "",
   street: "",
   building: "",
+  city: "",
   apartment: "",
 };
 
@@ -427,6 +428,7 @@ export default function AccountPage() {
     if (!newAddress.name.trim()) return setAddressError("Please enter an address nickname.");
     if (!newAddress.street.trim()) return setAddressError("Please enter the street.");
     if (!newAddress.building.trim()) return setAddressError("Please enter the building.");
+    if (!newAddress.city?.trim()) return setAddressError("Please enter the city.");
     setAddressError(null);
     const newId = `addr_${Date.now()}`;
     const formattedAddress: Address = {
@@ -435,6 +437,7 @@ export default function AccountPage() {
       name: newAddress.name.trim(),
       street: newAddress.street.trim(),
       building: newAddress.building.trim(),
+      city: newAddress.city.trim(),
       apartment: newAddress.apartment?.trim() || "",
     };
 
@@ -1321,6 +1324,20 @@ export default function AccountPage() {
                             />
                           </div>
                           <div className="space-y-1">
+                            <label className="text-xs font-bold text-secondary">City</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Beirut"
+                              value={newAddress.city}
+                              onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
+                              className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
                             <label className="text-xs font-bold text-secondary">Apartment</label>
                             <input
                               type="text"
@@ -1386,8 +1403,9 @@ export default function AccountPage() {
                               <div className="text-xs text-secondary space-y-0.5 font-medium leading-relaxed">
                                 <p>{addr.street || addr.addressLine1}</p>
                                 <p>Building: {addr.building || addr.addressLine2 || "Not specified"}</p>
-                                {(addr.apartment || addr.city || addr.state || addr.zip) && (
-                                  <p>Apartment: {addr.apartment || [addr.city, addr.state, addr.zip].filter(Boolean).join(" ")}</p>
+                                {addr.city && <p>City: {addr.city}</p>}
+                                {(addr.apartment || addr.state || addr.zip) && (
+                                  <p>Apartment: {addr.apartment || [addr.state, addr.zip].filter(Boolean).join(" ")}</p>
                                 )}
                               </div>
                             </div>
