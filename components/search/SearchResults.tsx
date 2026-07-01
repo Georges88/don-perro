@@ -42,9 +42,6 @@ export default function SearchResults({ products }: SearchResultsProps) {
   // ----------------------------------------------------
   const [activeQuery, setActiveQuery] = useState(queryParam);
   
-  // Selected categories (Dry Food, Wet Food, Freeze Dried)
-  const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>([]);
-  
   // Price Range
   const [priceLimit, setPriceLimit] = useState<number>(150);
 
@@ -90,19 +87,6 @@ export default function SearchResults({ products }: SearchResultsProps) {
     };
   }, [searchParams]);
 
-  // Get count of products in each Food Type (for sidebar labels)
-  const getTypeCount = (type: string) => {
-    return products.filter(p => p.productType === type).length;
-  };
-
-  // Toggle food types
-  const toggleFoodType = (type: string) => {
-    setSelectedFoodTypes(prev => 
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-    );
-    setCurrentPage(1);
-  };
-
   // Toggle health goals
   const toggleHealthGoal = (goal: string) => {
     setHealthGoals(prev => 
@@ -113,7 +97,6 @@ export default function SearchResults({ products }: SearchResultsProps) {
 
   // Clear all filters
   const clearAllFilters = () => {
-    setSelectedFoodTypes([]);
     setHealthGoals([]);
     setPriceLimit(150);
     setCurrentPage(1);
@@ -125,11 +108,6 @@ export default function SearchResults({ products }: SearchResultsProps) {
     : products;
 
   const filteredProducts = rankedProducts.filter(product => {
-
-    // 2. Sidebar food types (Dry Food, Wet Food, Freeze Dried)
-    if (selectedFoodTypes.length > 0) {
-      if (!selectedFoodTypes.includes(product.productType)) return false;
-    }
 
     // 3. Price Filter
     const price = parseFloat(product.priceRange.minVariantPrice.amount);
@@ -245,7 +223,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 md:px-16 pt-32 pb-24 font-sans text-on-surface">
+    <div className="max-w-7xl mx-auto px-6 md:px-16 pt-24 pb-24 font-sans text-on-surface">
       
       {/* Toast Alert / Cart Notification */}
       {cartNotification && (
@@ -343,19 +321,9 @@ export default function SearchResults({ products }: SearchResultsProps) {
 
         {/* Active Filter Pill Badges */}
         <div className="flex flex-wrap items-center gap-2 text-xs mt-6">
-          {(selectedFoodTypes.length > 0 || healthGoals.length > 0) && (
+          {healthGoals.length > 0 && (
             <span className="text-secondary font-semibold mr-1">Active filters:</span>
           )}
-          {selectedFoodTypes.map(type => (
-            <button
-              key={type}
-              onClick={() => toggleFoodType(type)}
-              className="bg-secondary-container text-on-secondary-container hover:bg-secondary-container/80 transition-colors px-3 py-1 rounded-full font-medium flex items-center gap-1 cursor-pointer select-none"
-            >
-              {type}
-              <X className="w-3 h-3 text-[#5a605a] ml-0.5" />
-            </button>
-          ))}
           {healthGoals.map(goal => (
             <button
               key={goal}
@@ -366,7 +334,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
               <X className="w-3 h-3 text-[#5a605a] ml-0.5" />
             </button>
           ))}
-          {(selectedFoodTypes.length > 0 || healthGoals.length > 0 || priceLimit < 150) && (
+          {(healthGoals.length > 0 || priceLimit < 150) && (
             <button 
               onClick={clearAllFilters}
               className="text-primary font-bold hover:underline transition-all ml-1 text-xs cursor-pointer"
@@ -382,43 +350,6 @@ export default function SearchResults({ products }: SearchResultsProps) {
         {/* Sidebar Filter Panel */}
         <aside className="hidden md:block w-64 flex-shrink-0 space-y-8 select-none">
           
-          {/* Categories / Food Types */}
-          <div id="filter-category-section">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-[#191c1c] mb-4">
-              Category
-            </h3>
-            <ul className="space-y-3">
-              {[
-                { name: "Dry Food", count: getTypeCount("Dry Food") },
-                { name: "Wet Food", count: getTypeCount("Wet Food") },
-                { name: "Freeze Dried", count: getTypeCount("Freeze Dried") }
-              ].map(cat => {
-                const isSelected = selectedFoodTypes.includes(cat.name);
-                return (
-                  <li 
-                    key={cat.name} 
-                    onClick={() => toggleFoodType(cat.name)}
-                    className="flex items-center justify-between group cursor-pointer text-sm select-none"
-                  >
-                    <span className={`transition-colors font-medium ${
-                      isSelected 
-                        ? "text-primary font-bold decoration-primary underline-offset-4" 
-                        : "text-secondary group-hover:text-primary"
-                    }`}>
-                      {cat.name}
-                    </span>
-                    <span className="text-[11px] font-mono text-secondary/70 bg-surface-container px-2 py-0.5 rounded-md font-bold">
-                      {cat.count}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          {/* Divider */}
-          <div className="h-px bg-outline-variant/20" />
-
           {/* Price Range Slider */}
           <div id="filter-price-section">
             <h3 className="text-xs font-bold uppercase tracking-widest text-[#191c1c] mb-4">
