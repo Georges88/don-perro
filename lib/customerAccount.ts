@@ -240,7 +240,7 @@ export async function getCustomerAccountUser(accessToken: string): Promise<Custo
         emailAddress {
           emailAddress
         }
-        metafield(namespace: "don_perro", key: "phone") {
+        metafield(namespace: "$app", key: "phone") {
           value
         }
       }
@@ -381,7 +381,7 @@ async function saveCustomerPhoneMetafield(
         metafields: [
           {
             ownerId: customerId,
-            namespace: "don_perro",
+            namespace: "$app",
             key: "phone",
             type: "single_line_text_field",
             value: phone,

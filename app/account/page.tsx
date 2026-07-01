@@ -34,6 +34,7 @@ import { Product } from "@/types/shopify";
 // Types
 type TabType = "profile" | "addresses" | "orders" | "wishlist";
 type OrderFilter = "6months" | "thisyear" | "all";
+const phonePattern = /^[+()\-. \d]{7,}$/;
 
 interface Address {
   id: string;
@@ -366,7 +367,7 @@ export default function AccountPage() {
     if (!firstName.trim() || !lastName.trim()) return setProfileError("Please enter your first and last name.");
     if (!email.trim()) return setProfileError("Please enter your email address.");
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setProfileError("Please enter a valid email address.");
-    if (!/^[+()\-. \d]{7,}$/.test(phone.trim())) return setProfileError("Please enter a valid phone number.");
+    if (!phonePattern.test(phone.trim())) return setProfileError("Please enter a valid phone number.");
     setProfileError(null);
     setProfileSaving(true);
 
@@ -670,7 +671,7 @@ export default function AccountPage() {
     );
   }
 
-  const isProfileIncomplete = !firstName.trim() || !lastName.trim() || !phone.trim();
+  const isProfileIncomplete = !firstName.trim() || !lastName.trim() || !phonePattern.test(phone.trim());
 
   if (isProfileIncomplete) {
     return (
