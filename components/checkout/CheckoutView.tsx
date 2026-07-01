@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
@@ -92,7 +91,6 @@ function getLatestCheckoutAddress(user?: { firstName?: string; lastName?: string
 }
 
 export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
-  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   
@@ -124,9 +122,8 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [customerEmail, setCustomerEmail] = useState<string | null>(null);
+  const [customerEmail, setCustomerEmail] = useState<string | undefined>(undefined);
   const [authChecked, setAuthChecked] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Initialize checkout products from LocalStorage, or load the high-fidelity default mockup items
   useEffect(() => {
@@ -174,20 +171,16 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
       .then((response) => response.ok ? response.json() : null)
       .then((payload) => {
         if (payload?.authenticated && payload.user?.email) {
-          setIsAuthenticated(true);
           setCustomerEmail(payload.user.email);
-          return;
         }
-        router.replace("/login?returnTo=/checkout");
       })
       .catch((error) => {
         console.error(error);
-        router.replace("/login?returnTo=/checkout");
       })
       .finally(() => {
         setAuthChecked(true);
       });
-  }, [router]);
+  }, []);
 
   // Shipping validation
   const handleValidateShipping = () => {
@@ -254,11 +247,6 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
 
   // Send customer to Shopify checkout so completed purchases become real Shopify orders.
   const handleCompletePurchase = async () => {
-    if (!isAuthenticated) {
-      router.push("/login?returnTo=/checkout");
-      return;
-    }
-
     setIsProcessing(true);
     setCheckoutError(null);
 
@@ -314,7 +302,7 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
   const estimatedTax = subtotal === 130 ? 12.00 : parseFloat((subtotal * taxMultiplier).toFixed(2));
   const total = subtotal + deliveryFee + estimatedTax;
 
-  if (!mounted || !authChecked || !isAuthenticated) {
+  if (!mounted || !authChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
