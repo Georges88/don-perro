@@ -26,7 +26,7 @@ import {
   Loader2
 } from "lucide-react";
 import FormNotice from "@/components/ui/FormNotice";
-import { AuthUser, clearAuthSession, getCurrentUser, setCurrentUser } from "@/lib/auth";
+import { AuthUser, clearAuthSession, getCurrentUser, getSavedCustomerProfile, setCurrentUser } from "@/lib/auth";
 import { getWishlist, setWishlist } from "@/lib/wishlist";
 import { getDefaultVariant, hasVariantPriceRange } from "@/lib/pricing";
 import { Product } from "@/types/shopify";
@@ -155,13 +155,16 @@ export default function AccountPage() {
         const response = await fetch("/api/auth/me", { cache: "no-store" });
         const payload = await response.json();
         const shopifyUser = payload.authenticated ? payload.user as AuthUser : null;
-        const savedUser = getCurrentUser();
+        const sessionUser = getCurrentUser();
+        const savedProfile = shopifyUser ? getSavedCustomerProfile(shopifyUser.email) : null;
         const currentUser = shopifyUser
           ? {
               ...shopifyUser,
-              phone: savedUser?.email === shopifyUser.email ? savedUser.phone || "" : "",
+              firstName: shopifyUser.firstName || savedProfile?.firstName || "",
+              lastName: shopifyUser.lastName || savedProfile?.lastName || "",
+              phone: savedProfile?.phone || "",
             }
-          : savedUser;
+          : sessionUser;
 
         if (!currentUser) {
           setAuthStatus("guest");
@@ -178,7 +181,16 @@ export default function AccountPage() {
         loadOrders();
       } catch (error) {
         console.error(error);
-        const currentUser = getCurrentUser();
+        const sessionUser = getCurrentUser();
+        const savedProfile = sessionUser ? getSavedCustomerProfile(sessionUser.email) : null;
+        const currentUser = sessionUser && savedProfile
+          ? {
+              ...sessionUser,
+              firstName: sessionUser.firstName || savedProfile.firstName,
+              lastName: sessionUser.lastName || savedProfile.lastName,
+              phone: savedProfile.phone || sessionUser.phone || "",
+            }
+          : sessionUser;
         if (!currentUser) {
           setAuthStatus("guest");
           return;
