@@ -13,7 +13,6 @@ import {
   SlidersHorizontal, 
   ChevronDown, 
   Package, 
-  Star, 
   Check, 
   Trash2, 
   Plus, 
@@ -21,7 +20,6 @@ import {
   Edit2,
   AlertCircle,
   Clock,
-  ThumbsUp,
   X,
   Loader2
 } from "lucide-react";
@@ -121,14 +119,9 @@ export default function AccountPage() {
   
   // Modals / Detail actions state
   const [viewingReason, setViewingReason] = useState<string | null>(null);
-  const [reviewingOrder, setReviewingOrder] = useState<string | null>(null);
-  const [reviewRating, setReviewRating] = useState<number>(5);
-  const [reviewText, setReviewText] = useState("");
-  const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [addressError, setAddressError] = useState<string | null>(null);
-  const [reviewError, setReviewError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
@@ -549,19 +542,6 @@ export default function AccountPage() {
     window.dispatchEvent(new Event("cart-updated"));
     showToast(`Added ${lineItems.length} ${lineItems.length === 1 ? "item" : "items"} from "${productName}" to your cart.`);
     setTimeout(() => router.push("/cart"), 600);
-  };
-
-  const handleReviewSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reviewText.trim()) return setReviewError("Please share a few words about your purchase before submitting.");
-    setReviewError(null);
-    setReviewSubmitted(true);
-    setTimeout(() => {
-      setReviewingOrder(null);
-      setReviewSubmitted(false);
-      setReviewText("");
-      showToast("Thank you! Your verified product review is being processed. Prime points gained! 🌟");
-    }, 1500);
   };
 
   const mapShopifyOrder = (order: ShopifyAccountOrder): Order => {
@@ -1020,12 +1000,6 @@ export default function AccountPage() {
                                     className="px-5 py-2 rounded-full bg-primary text-on-primary font-bold text-xs shadow-md shadow-primary/10 hover:shadow-lg active:scale-95 transition-all outline-none cursor-pointer"
                                   >
                                     Buy It Again
-                                  </button>
-                                  <button
-                                    onClick={() => setReviewingOrder(order.id)}
-                                    className="px-5 py-2 rounded-full border border-secondary text-secondary font-bold text-xs hover:bg-secondary-container/20 transition-all outline-none cursor-pointer"
-                                  >
-                                    Leave a Review
                                   </button>
                                 </>
                               )}
@@ -1570,88 +1544,6 @@ export default function AccountPage() {
                   Acknowledge & Close
                 </button>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* MODAL 3: LEAVE REVIEW DIALOG MODAL */}
-      <AnimatePresence>
-        {reviewingOrder && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg bg-white rounded-3xl overflow-hidden shadow-2xl border border-outline-variant/30"
-            >
-              <div className="bg-surface px-6 py-5 border-b border-outline-variant/30 flex justify-between items-center text-on-surface">
-                <div className="flex items-center gap-2">
-                  <Star className="w-5 h-5 text-primary fill-primary" />
-                  <h3 className="text-base font-black font-heading">Leave product review</h3>
-                </div>
-                <button
-                  onClick={() => setReviewingOrder(null)}
-                  className="p-1 rounded-full text-secondary hover:text-on-surface transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleReviewSubmit} noValidate>
-                <div className="p-6 space-y-4">
-                  <FormNotice message={reviewError} />
-                  <p className="text-xs font-bold text-secondary uppercase tracking-wider font-sans leading-none">Boutique Purchase</p>
-                  <p className="text-sm font-black text-on-surface">Gourmet Organic Treat Bundle (#DP-91022)</p>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-secondary block leading-none">Select Rating</label>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setReviewRating(star)}
-                          className="p-1 cursor-pointer hover:scale-110 transition-transform duration-150"
-                        >
-                          <Star className={`w-6.5 h-6.5 ${
-                            star <= reviewRating ? "text-primary fill-primary" : "text-outline-variant/40"
-                          }`} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label htmlFor="review-desc" className="text-xs font-bold text-secondary">Your feedback</label>
-                    <textarea
-                      id="review-desc"
-                      required
-                      placeholder="Share your pet's delight! Are the ingredients fully digestive? Was the texture well received?"
-                      rows={4}
-                      value={reviewText}
-                      onChange={(e) => setReviewText(e.target.value)}
-                      className="w-full bg-surface border border-outline-variant rounded-2xl py-3 px-4 text-xs font-medium text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                    ></textarea>
-                  </div>
-                </div>
-
-                <div className="bg-surface px-6 py-4 border-t border-outline-variant/20 flex justify-end gap-2 text-xs font-bold">
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 rounded-full bg-primary text-on-primary hover:shadow-lg active:scale-95 transition-all cursor-pointer outline-none"
-                  >
-                    Submit Review
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setReviewingOrder(null)}
-                    className="px-5 py-2.5 rounded-full border border-secondary text-secondary hover:bg-secondary-container/20 transition-all cursor-pointer outline-none"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
             </motion.div>
           </div>
         )}
