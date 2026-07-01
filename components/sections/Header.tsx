@@ -155,7 +155,7 @@ export default function Header() {
               Dogs
               <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
             </Link>
-            <div className="invisible absolute left-1/2 top-full z-50 w-48 -translate-x-1/2 pt-4 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+            <div className="invisible absolute left-1/2 top-full z-50 w-48 -translate-x-1/2 pt-4 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
               <div className="overflow-hidden rounded-xl border border-outline/10 bg-white py-1.5 shadow-[0px_14px_35px_rgba(90,96,90,0.12)]">
                 {PET_MENU_ITEMS.dog.map((item) => (
                   <Link
@@ -181,7 +181,7 @@ export default function Header() {
               Cats
               <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
             </Link>
-            <div className="invisible absolute left-1/2 top-full z-50 w-48 -translate-x-1/2 pt-4 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+            <div className="invisible absolute left-1/2 top-full z-50 w-48 -translate-x-1/2 pt-4 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
               <div className="overflow-hidden rounded-xl border border-outline/10 bg-white py-1.5 shadow-[0px_14px_35px_rgba(90,96,90,0.12)]">
                 {PET_MENU_ITEMS.cat.map((item) => (
                   <Link

@@ -43,26 +43,24 @@ function hasCompleteCustomerProfile(user: AuthUser) {
 interface Address {
   id: string;
   name: string;
-  isDefault: boolean;
-  addressLine1: string;
+  street: string;
+  building: string;
+  apartment?: string;
+  addressLine1?: string;
   addressLine2?: string;
-  city: string;
-  state: string;
-  zip: string;
-  phone: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  phone?: string;
 }
 
 const ADDRESS_STORAGE_KEY = "don_perro_addresses";
 
 const emptyAddressForm: Omit<Address, "id"> = {
   name: "",
-  isDefault: false,
-  addressLine1: "",
-  addressLine2: "",
-  city: "",
-  state: "",
-  zip: "",
-  phone: ""
+  street: "",
+  building: "",
+  apartment: "",
 };
 
 interface OrderDetails {
@@ -83,6 +81,8 @@ interface Order {
   status: string;
   imageUrl: string;
   badgeColor: string;
+  fulfillmentStatus: string;
+  financialStatus: string;
   isCancelled?: boolean;
   cancelReason?: string;
   details?: OrderDetails;
@@ -252,9 +252,11 @@ export default function AccountPage() {
       date: "Oct 12, 2023",
       price: "$89.00",
       itemCount: 1,
-      status: "Shipped",
+      status: "In Progress",
       imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBRpYchBjEfs_ivrd8Lga0LKuiFdXscx1QHTfCFvxqDXHWXg5ipaYzPwPWLs7HXblZQM0uqXb7R9vQH5Apkwq668_7CDkl3kQtZPT9cT2uxOMeLeUA9IaSSmR51gNmRnrw5ChPBEUND3Q-fvqSyElPkMf0NOsrbGSTUeYfxPCY7vM9ng-YkG6OjhvQVZAOer53ZG3JmVP7K_aEijv3v4mPdD8lICKnFedbJta70ky_Tx9m9aJV1kjGyrVTQoP4YM3z_c2CUvcK73U0S",
       badgeColor: "bg-tertiary-fixed text-on-tertiary-fixed",
+      fulfillmentStatus: "IN_PROGRESS",
+      financialStatus: "PAID",
       details: {
         payment: "Visa/ShopPay (ending in 4820)",
         shippingAddress: "1248 Sagamore Terrace, Suite B, Los Angeles, CA 90025",
@@ -273,6 +275,8 @@ export default function AccountPage() {
       status: "Delivered",
       imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuB6dAvqTfDLclJJ95mAYCwFKyGAF3R6lytp-VJV9UckxghuKhPX9ESKI8SELn0ps1CFfKz3E-ZUBVA6fZ2z39anAtj6DsBNKv6GYBsFXD13Yz5TG81UzatTw2VQ-DU_UxQiRn4-g1AoQ36nmh3Fd9IRUN6mNed1xEfcJ-kR_j85CzZuJU7FWrXPqUJAa6NEluooR0hwaeeiJ2D4xXV_wxlCxjMs9m3qMQ3_r5IXvY9ScgSOh7uCygnnB52TOsOw9WbyjFssl7QR3q00",
       badgeColor: "bg-secondary-container text-on-secondary-container",
+      fulfillmentStatus: "FULFILLED",
+      financialStatus: "PAID",
       details: {
         payment: "Apple Pay (Mastercard ending in 0831)",
         shippingAddress: "1248 Sagamore Terrace, Suite B, Los Angeles, CA 90025",
@@ -291,6 +295,8 @@ export default function AccountPage() {
       status: "Cancelled",
       imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDy5Hpv0BfZTfp7yPoOikhRwEsKOzpTKkulBIO4kk7OmlVQoUL4I1pp655rqXX5yAh-6DFLXySUy-rXLuZIOZ48ErzArMoS1xxTULuVp1NEt7UIS29lhlvprv1R8y806sBvu0NBToz1moGkJkciDXaN4eGNPGDTyXz0Cp9YFQ86_BXFs8lrRQNdkykyY95TrcTpw5Heb0gDksPFsg0l8gongYCfYzLM37-HjC5tZi1YVful4VbzcVE12QnMheq4tFXIaEEa9zS4JdhV",
       badgeColor: "bg-error-container text-on-error-container",
+      fulfillmentStatus: "UNFULFILLED",
+      financialStatus: "VOIDED",
       isCancelled: true,
       cancelReason: "Out of Stock: Our boutique organic clay supplier encountered transit blockages. Mateo initiated full immediate refund on Aug 16, 2023 to original payment card.",
       details: {
@@ -313,7 +319,9 @@ export default function AccountPage() {
       itemCount: 4,
       status: "Delivered",
       imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuB68KhJ8lC0lzLS0sNdRUj8XSDEjp1P9rO7j4c5hcseclRnp0sjo1fwx-jBpapCUPyORV6kl2GtkRMHaOGHKXuGXv2_yyYnrzYk4BVHk9uszNaZp25sCw5Hxs4JJvN6XLozmkjSDbKfZnhgkDSpN3gaJKmuTYWt3_G2I7H-bKPzgvBJyWfzzymtKwBOqSZ1MPuh_2-zz1L6lDCFS9YZO9tn4c5opN5Z9OHM7gz_FVQEHk8nCPV2v9O6H-LCshniswU8wEieY_xVCYA",
-      badgeColor: "bg-secondary-container text-on-secondary-container"
+      badgeColor: "bg-secondary-container text-on-secondary-container",
+      fulfillmentStatus: "FULFILLED",
+      financialStatus: "PAID"
     },
     {
       id: "DP-79201",
@@ -323,7 +331,9 @@ export default function AccountPage() {
       itemCount: 1,
       status: "Delivered",
       imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBl1KRtcbuA_02p6ue-q34xXugmv6git9xVlHLkiVnp2QhdApzDm7fWbftV-t2AlwOm-Ot-ilUes7mAQa_nlhF83O3nQOr8nHrpExVmpvcnHWbzTGYPshDR0V3bvcTF-ZZ4aAezqEAqy-Vhko30W9BqGbV2mAp-Tf8uT_M-h91QiXIorEYLie-M8S1MilpIw2g1rxg5cAUNdIOZGL6rd1MTfsyxzN9KKXQcmjj-_8xFIzr1Q41MiCto6LmhghGdelsNE6094BZcQdI",
-      badgeColor: "bg-secondary-container text-on-secondary-container"
+      badgeColor: "bg-secondary-container text-on-secondary-container",
+      fulfillmentStatus: "FULFILLED",
+      financialStatus: "PAID"
     }
   ];
 
@@ -414,23 +424,21 @@ export default function AccountPage() {
 
   const handleCreateAddress = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAddress.name.trim()) return setAddressError("Please enter a recipient or address name.");
-    if (!newAddress.phone.trim()) return setAddressError("Please enter a phone number for this address.");
-    if (!newAddress.addressLine1.trim()) return setAddressError("Please enter the street address.");
-    if (!newAddress.city.trim()) return setAddressError("Please enter the city.");
-    if (newAddress.state.trim().length !== 2) return setAddressError("Please enter a two-letter state code.");
-    if (!newAddress.zip.trim()) return setAddressError("Please enter the postal or ZIP code.");
+    if (!newAddress.name.trim()) return setAddressError("Please enter an address nickname.");
+    if (!newAddress.street.trim()) return setAddressError("Please enter the street.");
+    if (!newAddress.building.trim()) return setAddressError("Please enter the building.");
     setAddressError(null);
     const newId = `addr_${Date.now()}`;
     const formattedAddress: Address = {
       id: newId,
       ...newAddress,
-      name: newAddress.name || `${firstName} ${lastName}`
+      name: newAddress.name.trim(),
+      street: newAddress.street.trim(),
+      building: newAddress.building.trim(),
+      apartment: newAddress.apartment?.trim() || "",
     };
 
-    const updatedAddresses = newAddress.isDefault
-      ? addresses.map(addr => ({ ...addr, isDefault: false })).concat(formattedAddress)
-      : [...addresses, formattedAddress];
+    const updatedAddresses = [...addresses, formattedAddress];
 
     setAddresses(updatedAddresses);
     localStorage.setItem(ADDRESS_STORAGE_KEY, JSON.stringify(updatedAddresses));
@@ -555,18 +563,29 @@ export default function AccountPage() {
 
   const mapShopifyOrder = (order: ShopifyAccountOrder): Order => {
     const status = formatOrderStatus(order.fulfillmentStatus, order.financialStatus);
+    const lineItemCount = order.lineItems?.reduce((total, item) => total + item.quantity, 0) || 0;
 
     return {
-      id: order.id.replace(/^#/, ""),
+      id: normalizeOrderNumber(order.id),
       title: order.title,
       date: formatOrderDate(order.processedAt),
       price: order.totalPrice,
-      itemCount: order.itemCount,
+      itemCount: order.itemCount || lineItemCount,
       status,
       imageUrl: order.imageUrl,
       badgeColor: getOrderBadgeColor(status),
+      fulfillmentStatus: order.fulfillmentStatus,
+      financialStatus: order.financialStatus,
       lineItems: order.lineItems,
     };
+  };
+
+  const normalizeOrderNumber = (orderId: string) => {
+    return orderId.replace(/^#+/, "");
+  };
+
+  const displayOrderNumber = (orderId: string) => {
+    return `#${normalizeOrderNumber(orderId)}`;
   };
 
   const formatOrderStatus = (fulfillmentStatus: string, financialStatus: string) => {
@@ -574,16 +593,30 @@ export default function AccountPage() {
     const normalizedFinancial = financialStatus.trim().toUpperCase();
 
     if (["FULFILLED", "DELIVERED"].includes(normalizedFulfillment)) return "Delivered";
-    if (["IN_PROGRESS", "PARTIALLY_FULFILLED", "ON_HOLD"].includes(normalizedFulfillment)) return "Shipped";
-    if (["VOIDED", "REFUNDED", "PARTIALLY_REFUNDED"].includes(normalizedFinancial)) return "Cancelled";
-    return "Processing";
+    if (["IN_PROGRESS", "PARTIALLY_FULFILLED", "ON_HOLD", "SCHEDULED"].includes(normalizedFulfillment)) return "In Progress";
+    if (["UNFULFILLED", "PENDING"].includes(normalizedFulfillment)) return "Processing";
+    if (["REFUNDED", "PARTIALLY_REFUNDED", "VOIDED"].includes(normalizedFinancial)) return "Cancelled";
+    if (normalizedFinancial === "PAID") return "Paid";
+
+    return formatRawStatus(normalizedFulfillment || normalizedFinancial);
   };
 
   const getOrderBadgeColor = (status: string) => {
     if (status === "Delivered") return "bg-secondary-container text-on-secondary-container";
-    if (status === "Shipped") return "bg-tertiary-fixed text-on-tertiary-fixed";
+    if (status === "In Progress") return "bg-tertiary-fixed text-on-tertiary-fixed";
     if (status === "Cancelled") return "bg-error-container text-on-error-container";
+    if (status === "Paid") return "bg-secondary-container text-on-secondary-container";
     return "bg-primary-container text-on-primary-container";
+  };
+
+  const formatRawStatus = (status: string) => {
+    if (!status) return "Not available";
+
+    return status
+      .toLowerCase()
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
   };
 
   const formatOrderDate = (date: string) => {
@@ -941,7 +974,7 @@ export default function AccountPage() {
                               </div>
                               <div className="space-y-1">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className="font-bold text-sm tracking-wide text-primary">#{order.id}</span>
+                                  <span className="font-bold text-sm tracking-wide text-primary">{displayOrderNumber(order.id)}</span>
                                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide select-none ${order.badgeColor}`}>
                                     {order.status}
                                   </span>
@@ -964,22 +997,18 @@ export default function AccountPage() {
                           {/* Order actions row */}
                           <div className="flex flex-wrap gap-2 pt-3 border-t border-outline-variant/20 items-center justify-between">
                             <div className="flex flex-wrap gap-2">
-                              {order.status === "Shipped" && (
-                                <>
-                                  <Link
-                                    href={`/track-order?id=${encodeURIComponent(order.id)}`}
-                                    className="px-5 py-2 rounded-full bg-primary text-on-primary font-bold text-xs shadow-md shadow-primary/10 hover:shadow-lg active:scale-95 transition-all outline-none cursor-pointer"
-                                  >
-                                    View Status
-                                  </Link>
-                                  <button
-                                    onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                                    className="px-5 py-2 rounded-full border border-secondary text-secondary font-bold text-xs hover:bg-secondary-container/20 transition-all outline-none cursor-pointer"
-                                  >
-                                    Order Details
-                                  </button>
-                                </>
-                              )}
+                              <Link
+                                href={`/track-order?id=${encodeURIComponent(order.id)}`}
+                                className="px-5 py-2 rounded-full bg-primary text-on-primary font-bold text-xs shadow-md shadow-primary/10 hover:shadow-lg active:scale-95 transition-all outline-none cursor-pointer"
+                              >
+                                View Status
+                              </Link>
+                              <button
+                                onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
+                                className="px-5 py-2 rounded-full border border-secondary text-secondary font-bold text-xs hover:bg-secondary-container/20 transition-all outline-none cursor-pointer"
+                              >
+                                Order Details
+                              </button>
 
                               {order.status === "Delivered" && (
                                 <>
@@ -995,13 +1024,6 @@ export default function AccountPage() {
                                   >
                                     Leave a Review
                                   </button>
-                                  <button
-                                    onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                                    className="px-5 py-2 rounded-full border border-transparent text-secondary font-bold text-xs hover:bg-secondary-container/20 transition-all outline-none cursor-pointer flex items-center gap-1"
-                                  >
-                                    <span>Receipt</span>
-                                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-185" : ""}`} />
-                                  </button>
                                 </>
                               )}
 
@@ -1013,20 +1035,13 @@ export default function AccountPage() {
                                   >
                                     View Reason
                                   </button>
-                                  <button
-                                    onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                                    className="px-5 py-2 rounded-full border border-transparent text-secondary font-bold text-xs hover:bg-secondary-container/20 transition-all outline-none cursor-pointer flex items-center gap-1"
-                                  >
-                                    <span>Details</span>
-                                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-185" : ""}`} />
-                                  </button>
                                 </>
                               )}
                             </div>
                           </div>
 
                           {/* Accordion/Dropdown Expansion for Order Details */}
-                          {isExpanded && order.details && (
+                          {isExpanded && (
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: "auto" }}
@@ -1035,31 +1050,43 @@ export default function AccountPage() {
                             >
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1 bg-surface-container-low/30 p-3 rounded-xl border border-outline-variant/10">
-                                  <p className="font-bold text-on-surface">Payment Method</p>
-                                  <p>{order.details.payment}</p>
+                                  <p className="font-bold text-on-surface">Order Number</p>
+                                  <p>{displayOrderNumber(order.id)}</p>
                                 </div>
                                 <div className="space-y-1 bg-surface-container-low/30 p-3 rounded-xl border border-outline-variant/10">
-                                  <p className="font-bold text-on-surface">Shipping Destination</p>
-                                  <p>{order.details.shippingAddress}</p>
+                                  <p className="font-bold text-on-surface">Order Status</p>
+                                  <p>{order.status}</p>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1 bg-surface-container-low/30 p-3 rounded-xl border border-outline-variant/10">
+                                  <p className="font-bold text-on-surface">Fulfillment</p>
+                                  <p>{formatRawStatus(order.fulfillmentStatus)}</p>
+                                </div>
+                                <div className="space-y-1 bg-surface-container-low/30 p-3 rounded-xl border border-outline-variant/10">
+                                  <p className="font-bold text-on-surface">Payment</p>
+                                  <p>{formatRawStatus(order.financialStatus)}</p>
                                 </div>
                               </div>
                               <div className="bg-surface-container-low/20 p-4 rounded-xl space-y-1.5 border border-outline-variant/20">
-                                <p className="font-bold text-on-surface mb-2">Pricing Breakdown</p>
-                                <div className="flex justify-between">
-                                  <span>Subtotal</span>
-                                  <span>{order.details.subtotal}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Shipping Route</span>
-                                  <span>{order.details.shipping}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Estimated Taxes</span>
-                                  <span>{order.details.tax}</span>
-                                </div>
+                                <p className="font-bold text-on-surface mb-2">Items</p>
+                                {order.lineItems?.length ? (
+                                  order.lineItems.map((item) => (
+                                    <div key={`${item.merchandiseId}-${item.variantTitle}`} className="flex justify-between gap-4">
+                                      <span>
+                                        {item.title}
+                                        {item.variantTitle && item.variantTitle !== "Default" ? ` - ${item.variantTitle}` : ""}
+                                        <span className="text-secondary/70"> x{item.quantity}</span>
+                                      </span>
+                                      <span>{item.price}</span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p>No item details were returned by Shopify for this order yet.</p>
+                                )}
                                 <div className="flex justify-between text-on-surface font-black border-t border-outline-variant/30 pt-1.5 mt-1.5 text-sm">
-                                  <span>Total Charged</span>
-                                  <span>{order.details.total}</span>
+                                  <span>Total</span>
+                                  <span>{order.price}</span>
                                 </div>
                               </div>
                             </motion.div>
@@ -1224,7 +1251,7 @@ export default function AccountPage() {
                       <form onSubmit={handleCreateAddress} noValidate className="space-y-4">
                         <FormNotice message={addressError} />
                         <div className="flex justify-between items-center border-b border-outline-variant/20 pb-2">
-                          <h3 className="font-bold text-on-surface text-base">New Shipping Route</h3>
+                          <h3 className="font-bold text-on-surface text-base">New Address</h3>
                           <button
                             type="button"
                             onClick={() => setIsAddingAddress(false)}
@@ -1236,101 +1263,51 @@ export default function AccountPage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1">
-                            <label className="text-xs font-bold text-secondary">Recipient / Tag Name</label>
+                            <label className="text-xs font-bold text-secondary">Address Nickname</label>
                             <input
                               type="text"
                               required
-                              placeholder="e.g. Mateo Alvarez (Home)"
+                              placeholder="e.g. Home, Office"
                               value={newAddress.name}
                               onChange={(e) => setNewAddress({ ...newAddress, name: e.target.value })}
                               className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none"
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-xs font-bold text-secondary">Phone Number</label>
+                            <label className="text-xs font-bold text-secondary">Street</label>
                             <input
-                              type="tel"
+                              type="text"
                               required
-                              placeholder="+1 (555) 382-9901"
-                              value={newAddress.phone}
-                              onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
+                              placeholder="e.g. Main Street"
+                              value={newAddress.street}
+                              onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })}
                               className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none"
                             />
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="md:col-span-2 space-y-1">
-                            <label className="text-xs font-bold text-secondary">Street address</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-secondary">Building</label>
                             <input
                               type="text"
                               required
-                              placeholder="1248 Sagamore Terrace"
-                              value={newAddress.addressLine1}
-                              onChange={(e) => setNewAddress({ ...newAddress, addressLine1: e.target.value })}
+                              placeholder="e.g. Building A"
+                              value={newAddress.building}
+                              onChange={(e) => setNewAddress({ ...newAddress, building: e.target.value })}
                               className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none"
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-xs font-bold text-secondary">Unit / Suit etc (Optional)</label>
+                            <label className="text-xs font-bold text-secondary">Apartment</label>
                             <input
                               type="text"
-                              placeholder="Suite B"
-                              value={newAddress.addressLine2}
-                              onChange={(e) => setNewAddress({ ...newAddress, addressLine2: e.target.value })}
+                              placeholder="e.g. 3B"
+                              value={newAddress.apartment}
+                              onChange={(e) => setNewAddress({ ...newAddress, apartment: e.target.value })}
                               className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none"
                             />
                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-secondary">City</label>
-                            <input
-                              type="text"
-                              required
-                              placeholder="Los Angeles"
-                              value={newAddress.city}
-                              onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
-                              className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-secondary">State</label>
-                            <input
-                              type="text"
-                              required
-                              placeholder="CA"
-                              maxLength={2}
-                              value={newAddress.state}
-                              onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
-                              className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-secondary">Postal Code / Zip</label>
-                            <input
-                              type="text"
-                              required
-                              placeholder="90025"
-                              value={newAddress.zip}
-                              onChange={(e) => setNewAddress({ ...newAddress, zip: e.target.value })}
-                              className="w-full bg-surface border border-outline-variant rounded-xl py-3 px-4 text-sm font-medium text-on-surface focus:border-primary outline-none font-mono"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-2">
-                          <input
-                            type="checkbox"
-                            id="set-default"
-                            checked={newAddress.isDefault}
-                            onChange={(e) => setNewAddress({ ...newAddress, isDefault: e.target.checked })}
-                            className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary-container cursor-pointer"
-                          />
-                          <label htmlFor="set-default" className="text-xs font-semibold text-secondary cursor-pointer select-none">
-                            Set as primary default shipping reference.
-                          </label>
                         </div>
 
                         <div className="flex items-center gap-3 pt-3">
@@ -1383,17 +1360,13 @@ export default function AccountPage() {
                                 <h4 className="font-bold text-on-surface font-sans text-sm tracking-wide">
                                   {addr.name}
                                 </h4>
-                                {addr.isDefault && (
-                                  <span className="bg-primary-container text-on-primary-container font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full select-none leading-none">
-                                    Default Shipping
-                                  </span>
-                                )}
                               </div>
                               <div className="text-xs text-secondary space-y-0.5 font-medium leading-relaxed">
-                                <p>{addr.addressLine1}</p>
-                                {addr.addressLine2 && <p>{addr.addressLine2}</p>}
-                                <p>{addr.city}, {addr.state} {addr.zip}</p>
-                                <p className="mt-2 text-[11px] font-mono text-secondary/70">Phone: {addr.phone}</p>
+                                <p>{addr.street || addr.addressLine1}</p>
+                                <p>Building: {addr.building || addr.addressLine2 || "Not specified"}</p>
+                                {(addr.apartment || addr.city || addr.state || addr.zip) && (
+                                  <p>Apartment: {addr.apartment || [addr.city, addr.state, addr.zip].filter(Boolean).join(" ")}</p>
+                                )}
                               </div>
                             </div>
 
