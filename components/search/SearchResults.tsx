@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { 
-  Search, 
   X, 
   ChevronLeft, 
   ChevronRight, 
@@ -43,8 +42,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
   // ----------------------------------------------------
   // Interactive Local Filter States
   // ----------------------------------------------------
-  const [searchInput, setSearchInput] = useState(queryParam || "Kibble");
-  const [activeQuery, setActiveQuery] = useState(queryParam || "Kibble");
+  const [activeQuery, setActiveQuery] = useState(queryParam);
   
   // Selected categories (Dry Food, Wet Food, Freeze Dried)
   const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>([]);
@@ -81,11 +79,9 @@ export default function SearchResults({ products }: SearchResultsProps) {
 
   // Sync with URL query and wishlist on mount / change
   useEffect(() => {
-    if (searchParams.get("q")) {
-      const q = searchParams.get("q") || "";
-      setSearchInput(q);
-      setActiveQuery(q);
-    }
+    const q = searchParams.get("q") || "";
+    setActiveQuery(q);
+    setCurrentPage(1);
     syncWishlist();
 
     window.addEventListener("wishlist-updated", syncWishlist);
@@ -95,17 +91,6 @@ export default function SearchResults({ products }: SearchResultsProps) {
       window.removeEventListener("storage", syncWishlist);
     };
   }, [searchParams]);
-
-  // Handle Search submit
-  const handleSearchSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setActiveQuery(searchInput);
-    setCurrentPage(1);
-    // Update URL query string
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("q", searchInput);
-    router.push(`/search?${params.toString()}`);
-  };
 
   // Get count of products in each Food Type (for sidebar labels)
   const getTypeCount = (type: string) => {
@@ -133,7 +118,6 @@ export default function SearchResults({ products }: SearchResultsProps) {
     setSelectedFoodTypes([]);
     setHealthGoals([]);
     setPriceLimit(150);
-    setSearchInput("");
     setActiveQuery("");
     setCurrentPage(1);
     // Update URL query string
@@ -286,31 +270,86 @@ export default function SearchResults({ products }: SearchResultsProps) {
         </div>
       )}
 
-      {/* Header section with query summary & active filters */}
-      <header className="mb-8" id="search-results-header">
-        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-2xl md:text-3.5xl font-bold font-heading tracking-tight">
-              {activeQuery ? `Results for "${activeQuery}"` : "All Products"}
+      <div className="flex items-center gap-2 text-xs text-secondary/70 mb-8 font-medium">
+        <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+        <span>/</span>
+        <span className="text-secondary font-semibold">Search</span>
+      </div>
+
+      {/* Header section with query summary & controls */}
+      <header className="mb-10 border-b border-outline/20 pb-8" id="search-results-header">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tight font-heading text-[#0b1515] mb-5">
+              Search
             </h1>
-            <span className="text-secondary text-sm font-medium">({totalItems} items)</span>
+            <p className="text-secondary max-w-xl leading-relaxed">
+              {activeQuery
+                ? `Showing premium essentials matching "${activeQuery}".`
+                : "Find premium essentials for your companions, hand-crafted with organic precision."}
+            </p>
           </div>
 
-          {/* Quick bar search form for direct editing on the page */}
-          <form onSubmit={handleSearchSubmit} className="relative w-full sm:max-w-xs block sm:hidden">
-            <input 
-              type="text" 
-              placeholder="Search catalog..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-full py-2 pl-9 pr-4 text-xs font-medium focus:ring-1 focus:ring-primary outline-none transition-all"
-            />
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
-          </form>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="relative">
+              <button 
+                type="button"
+                onClick={() => setIsSortOpen(!isSortOpen)}
+                className="flex items-center gap-2 bg-surface-container-low px-4 py-2.5 border border-outline/10 rounded-full hover:border-outline/40 transition-all text-xs font-bold text-primary cursor-pointer active:scale-98 select-none"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-secondary" />
+                <span className="text-xs font-semibold text-secondary whitespace-nowrap">Sort:</span>
+                <span className="text-xs font-bold text-primary flex items-center gap-1">
+                  {sortBy}
+                  <ChevronDown className={`w-3.5 h-3.5 text-primary transition-transform duration-200 ${isSortOpen ? "rotate-180" : ""}`} />
+                </span>
+              </button>
+
+              <AnimatePresence>
+                {isSortOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-20 cursor-default" 
+                      onClick={() => setIsSortOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className="absolute right-0 mt-2 w-48 bg-white border border-outline/10 rounded-xl shadow-[0px_10px_30px_rgba(90,96,90,0.08)] py-1.5 z-30 overflow-hidden"
+                    >
+                      {sortOptions.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => {
+                            setSortBy(option);
+                            setIsSortOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-xs font-semibold transition-colors flex items-center justify-between cursor-pointer ${
+                            sortBy === option 
+                              ? "bg-primary-container/20 text-primary font-bold" 
+                              : "text-secondary hover:bg-surface-container-low hover:text-on-surface"
+                          }`}
+                        >
+                          <span>{option}</span>
+                          {sortBy === option && (
+                            <Check className="w-3.5 h-3.5 text-primary" />
+                          )}
+                        </button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
 
         {/* Active Filter Pill Badges */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs mt-6">
           {(selectedFoodTypes.length > 0 || healthGoals.length > 0) && (
             <span className="text-secondary font-semibold mr-1">Active filters:</span>
           )}
@@ -345,14 +384,14 @@ export default function SearchResults({ products }: SearchResultsProps) {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-8 items-start">
+      <div className="flex flex-col md:flex-row gap-8">
         
         {/* Sidebar Filter Panel */}
-        <aside className="hidden lg:flex flex-col gap-8 sticky top-32 bg-surface-container-lowest/40 p-5 rounded-2xl border border-secondary-container/50">
+        <aside className="hidden md:block w-64 flex-shrink-0 space-y-8 select-none">
           
           {/* Categories / Food Types */}
           <div id="filter-category-section">
-            <h3 className="font-bold text-xs uppercase tracking-wider text-on-surface mb-4 font-sans">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[#191c1c] mb-4">
               Category
             </h3>
             <ul className="space-y-3">
@@ -389,7 +428,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
 
           {/* Price Range Slider */}
           <div id="filter-price-section">
-            <h3 className="font-bold text-xs uppercase tracking-wider text-on-surface mb-4 font-sans">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[#191c1c] mb-4">
               Price Range
             </h3>
             <div className="space-y-3">
@@ -417,7 +456,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
 
           {/* Health Goals */}
           <div id="filter-health-section">
-            <h3 className="font-bold text-xs uppercase tracking-wider text-on-surface mb-4 font-sans">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[#191c1c] mb-4">
               Health Goal
             </h3>
             <div className="space-y-3">
@@ -453,101 +492,34 @@ export default function SearchResults({ products }: SearchResultsProps) {
         </aside>
 
         {/* Results Main Section */}
-        <section className="flex flex-col gap-6">
+        <section className="flex-grow">
           
-          {/* Controls Row */}
-          <div className="flex justify-between items-center bg-surface-container-lowest border border-outline-variant/10 p-3.5 sm:p-4 rounded-2xl shadow-[0_4px_12px_rgba(90,96,90,0.01)]">
-            
-            {/* Mobile Filter Toggle Button */}
-            <button 
-              onClick={() => {
-                // Open a quick filter options overlay on mobile
-                setSelectedFoodTypes(prev => prev.length === 0 ? ["Dry Food"] : prev);
-                const showM = !activeQuery; // Mock action or opens filter drawer
-              }}
-              className="lg:hidden flex items-center gap-1.5 text-xs font-bold text-primary bg-primary-container/10 border border-primary/20 py-1.5 px-3 rounded-full hover:bg-primary-container/20 transition-all select-none"
-              id="filter-mobile-toggle"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              Toggle Filters
-            </button>
-
-            {/* Pagination helper info */}
-            <div className="hidden sm:inline-block text-xs font-semibold text-secondary/80">
-              Showing <span className="text-on-surface font-bold">{totalItems === 0 ? 0 : indexOfFirstItem + 1}-{Math.min(indexOfLastItem, totalItems)}</span> of <span className="text-on-surface font-bold">{totalItems}</span> products
-            </div>
-
-            {/* Sorting SELECT dropdown */}
-            <div className="relative flex items-center gap-2 ml-auto text-xs sm:text-sm">
-              <span className="hidden sm:inline text-xs font-semibold text-secondary">Sort by:</span>
-              <button 
-                type="button"
-                onClick={() => setIsSortOpen(!isSortOpen)}
-                className="flex items-center gap-1.5 bg-surface-container-low px-4 py-2 border border-outline/10 rounded-full hover:border-outline/40 transition-all text-xs font-bold text-on-surface cursor-pointer active:scale-98 select-none"
-              >
-                <span>{sortBy}</span>
-                <ChevronDown className={`w-3.5 h-3.5 text-secondary transition-transform duration-200 ${isSortOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              <AnimatePresence>
-                {isSortOpen && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-20 cursor-default" 
-                      onClick={() => setIsSortOpen(false)}
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ duration: 0.15, ease: "easeOut" }}
-                      className="absolute right-0 mt-12 w-48 bg-white border border-outline/10 rounded-xl shadow-[0px_10px_30px_rgba(90,96,90,0.08)] py-1.5 z-30 overflow-hidden"
-                    >
-                      {sortOptions.map((option) => (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => {
-                            setSortBy(option);
-                            setIsSortOpen(false);
-                            setCurrentPage(1);
-                          }}
-                          className={`w-full text-left px-4 py-2 text-xs font-semibold transition-colors flex items-center justify-between cursor-pointer ${
-                            sortBy === option 
-                              ? "bg-primary-container/20 text-primary font-bold" 
-                              : "text-secondary hover:bg-surface-container-low hover:text-on-surface"
-                          }`}
-                        >
-                          <span>{option}</span>
-                          {sortBy === option && (
-                            <Check className="w-3.5 h-3.5 text-primary" />
-                          )}
-                        </button>
-                      ))}
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
           {/* Grid of Product Cards */}
           {totalItems > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6" id="search-results-grid">
-              {currentItems.map(product => {
-                const badge = getBadge(product);
-                const price = parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2);
-                const pricePrefix = hasVariantPriceRange(product) ? "From " : "";
-                const hasCompare = product.compareAtPriceRange && parseFloat(product.compareAtPriceRange.minVariantPrice.amount) > 0;
-                const comparePrice = hasCompare ? parseFloat(product.compareAtPriceRange!.minVariantPrice.amount).toFixed(2) : null;
+            <div>
+              <div className="flex justify-between items-center text-xs text-secondary/70 mb-4 font-sans font-medium px-1">
+                <span>
+                  Showing <span className="text-primary font-bold font-mono">{totalItems === 0 ? 0 : indexOfFirstItem + 1}</span>-
+                  <span className="text-primary font-bold font-mono">{Math.min(indexOfLastItem, totalItems)}</span> of{" "}
+                  <span className="text-primary font-bold font-mono">{totalItems}</span> premium goods
+                </span>
+              </div>
 
-                return (
-                  <div 
-                    key={product.id}
-                    className="group flex flex-col bg-surface-container-lowest p-2.5 sm:p-3.5 rounded-2xl border border-secondary/15 transition-all duration-300 hover:shadow-[0px_10px_30px_rgba(90,96,90,0.08)] hover:-translate-y-1 relative"
-                  >
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6" id="search-results-grid">
+                {currentItems.map(product => {
+                  const badge = getBadge(product);
+                  const price = parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2);
+                  const pricePrefix = hasVariantPriceRange(product) ? "From " : "";
+                  const hasCompare = product.compareAtPriceRange && parseFloat(product.compareAtPriceRange.minVariantPrice.amount) > 0;
+                  const comparePrice = hasCompare ? parseFloat(product.compareAtPriceRange!.minVariantPrice.amount).toFixed(2) : null;
+
+                  return (
+                    <div 
+                      key={product.id}
+                      className="group flex flex-col relative transition-all duration-300 select-none"
+                    >
                     {/* Image Frame with Link to details */}
-                    <div className="relative aspect-square overflow-hidden bg-surface-container rounded-xl mb-3.5">
+                    <div className="relative aspect-square overflow-hidden rounded-2xl bg-[#edeeee] mb-4 shadow-[0_4px_10px_rgba(90,96,90,0.02)] group-hover:shadow-[0_10px_30px_rgba(90,96,90,0.08)] group-hover:-translate-y-1 transition-all duration-300">
                       <Link href={`/products/${product.handle}`} className="block w-full h-full cursor-pointer">
                         <img 
                           src={product.featuredImage.url} 
@@ -603,7 +575,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
                     </div>
 
                     {/* Metadata Detail Labels */}
-                    <Link href={`/products/${product.handle}`} className="flex flex-col flex-grow cursor-pointer">
+                    <Link href={`/products/${product.handle}`} className="flex flex-col flex-grow cursor-pointer px-1">
                       <p className="text-[10px] text-secondary font-bold uppercase tracking-widest mb-1">
                         {product.productType}
                       </p>
@@ -623,9 +595,10 @@ export default function SearchResults({ products }: SearchResultsProps) {
                         )}
                       </div>
                     </Link>
-                  </div>
-                );
-              })}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             

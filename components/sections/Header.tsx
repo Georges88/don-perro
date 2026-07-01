@@ -172,12 +172,32 @@ export default function Header() {
     };
   }, []);
 
+  useEffect(() => {
+    if (pathname === "/search") {
+      setSearchQuery(searchParams.get("q") || "");
+    }
+  }, [pathname, searchParams]);
+
+  const updateSearchQuery = (value: string) => {
+    setSearchQuery(value);
+
+    const trimmedValue = value.trim();
+    if (trimmedValue) {
+      router.replace(`/search?q=${encodeURIComponent(trimmedValue)}`);
+      return;
+    }
+
+    if (pathname === "/search") {
+      router.replace("/search");
+    }
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     } else {
-      router.push("/search?q=Kibble");
+      router.push("/search");
     }
   };
 
@@ -274,7 +294,7 @@ export default function Header() {
               type="text" 
               placeholder="Kibble"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => updateSearchQuery(e.target.value)}
               className={`bg-surface-container/60 hover:bg-surface-container border text-xs text-on-surface rounded-full py-2 pl-9 pr-4 focus:ring-1 focus:ring-primary outline-none w-60 transition-all font-medium ${
                 isSearchActive ? "border-primary/40 ring-1 ring-primary/20" : "border-transparent"
               }`}
