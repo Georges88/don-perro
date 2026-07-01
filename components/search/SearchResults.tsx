@@ -26,6 +26,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Product } from "@/types/shopify";
 import { getWishlist, toggleWishlist } from "@/lib/wishlist";
 import { getDefaultVariant, hasVariantPriceRange } from "@/lib/pricing";
+import { searchProducts } from "@/lib/elasticSearch";
 
 interface SearchResultsProps {
   products: Product[];
@@ -46,13 +47,13 @@ export default function SearchResults({ products }: SearchResultsProps) {
   const [activeQuery, setActiveQuery] = useState(queryParam || "Kibble");
   
   // Selected categories (Dry Food, Wet Food, Freeze Dried)
-  const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>(["Dry Food"]);
+  const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>([]);
   
   // Price Range
   const [priceLimit, setPriceLimit] = useState<number>(150);
 
   // Health Goals (Organic, Grain-Free, Sensitive Stomach)
-  const [healthGoals, setHealthGoals] = useState<string[]>(["Organic"]);
+  const [healthGoals, setHealthGoals] = useState<string[]>([]);
 
   // Sort State
   const [sortBy, setSortBy] = useState<string>("Best Selling");
@@ -142,16 +143,11 @@ export default function SearchResults({ products }: SearchResultsProps) {
   };
 
   // Filter & Sort Logic
-  const filteredProducts = products.filter(product => {
-    // 1. Text Search matching title, description, or tags
-    if (activeQuery) {
-      const q = activeQuery.toLowerCase();
-      const matchTitle = product.title.toLowerCase().includes(q);
-      const matchDesc = product.description.toLowerCase().includes(q);
-      const matchTags = product.tags.some(t => t.toLowerCase().includes(q));
-      const matchType = product.productType.toLowerCase().includes(q);
-      if (!matchTitle && !matchDesc && !matchTags && !matchType) return false;
-    }
+  const rankedProducts = activeQuery.trim()
+    ? searchProducts(products, activeQuery).map((result) => result.product)
+    : products;
+
+  const filteredProducts = rankedProducts.filter(product => {
 
     // 2. Sidebar food types (Dry Food, Wet Food, Freeze Dried)
     if (selectedFoodTypes.length > 0) {
@@ -181,6 +177,10 @@ export default function SearchResults({ products }: SearchResultsProps) {
 
   // Sorting Logic
   const sortedProducts = [...filteredProducts].sort((a, b) => {
+    if (activeQuery.trim() && sortBy === "Best Selling") {
+      return 0;
+    }
+
     const priceA = parseFloat(a.priceRange.minVariantPrice.amount);
     const priceB = parseFloat(b.priceRange.minVariantPrice.amount);
 
