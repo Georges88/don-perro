@@ -275,11 +275,15 @@ export default function CartView({ initialProducts }: CartViewProps) {
       try {
         const authResponse = await fetch("/api/auth/me", { cache: "no-store" });
         const authPayload = authResponse.ok ? await authResponse.json() : null;
-        customerEmail = authPayload?.authenticated ? authPayload.user?.email : undefined;
-        checkoutAddress = authPayload?.authenticated ? getLatestCheckoutAddress(authPayload.user) : getLatestCheckoutAddress();
+        if (!authPayload?.authenticated) {
+          window.location.href = "/login?returnTo=/cart";
+          return;
+        }
+        customerEmail = authPayload.user?.email;
+        checkoutAddress = getLatestCheckoutAddress(authPayload.user);
       } catch {
-        customerEmail = undefined;
-        checkoutAddress = getLatestCheckoutAddress();
+        window.location.href = "/login?returnTo=/cart";
+        return;
       }
 
       const checkoutResponse = await fetch("/api/checkout/create", {

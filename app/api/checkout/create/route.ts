@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { CUSTOMER_ACCESS_COOKIE, getCustomerAccountUser } from "@/lib/customerAccount";
 import { createShopifyCart, ShopifyCheckoutAddressPreference } from "@/lib/shopify";
 
 interface CheckoutLineInput {
@@ -8,8 +9,24 @@ interface CheckoutLineInput {
 
 export async function POST(request: Request) {
   try {
+    const accessToken = getCookie(request.headers.get("cookie") || "", CUSTOMER_ACCESS_COOKIE);
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Please sign in before continuing to checkout.", loginUrl: "/login?returnTo=/cart" },
+        { status: 401 },
+      );
+    }
+
+    let customer;
+    try {
+      customer = await getCustomerAccountUser(accessToken);
+    } catch {
+      return NextResponse.json(
+        { error: "Please sign in again before continuing to checkout.", loginUrl: "/login?returnTo=/cart" },
+        { status: 401 },
+      );
+    }
     const body = await request.json();
-    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : undefined;
     const address = normalizeCheckoutAddress(body.address);
     const linesInput = Array.isArray(body.lines) ? body.lines as CheckoutLineInput[] : [];
     const lines = linesInput
@@ -23,12 +40,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Your cart does not contain Shopify product variants." }, { status: 400 });
     }
 
-    const cart = await createShopifyCart(lines, email, address);
+    const cart = await createShopifyCart(lines, customer.email, address);
     return NextResponse.json({ checkoutUrl: cart.checkoutUrl, cartId: cart.id });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create Shopify checkout.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+function getCookie(cookieHeader: string, name: string) {
+  return cookieHeader
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
 }
 
 function normalizeCheckoutAddress(value: unknown): ShopifyCheckoutAddressPreference | undefined {
