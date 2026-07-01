@@ -257,7 +257,7 @@ export default function CartView({ initialProducts }: CartViewProps) {
 
   const discountAmount = subtotal * promoDiscount;
   const deliveryFee = subtotal > 150 ? 0 : 5.00;
-  const estimatedTax = (subtotal - discountAmount) * 0.085; // 8.5%
+  const estimatedTax = 0;
   const total = subtotal - discountAmount + deliveryFee + estimatedTax;
 
   if (!mounted) {
@@ -638,7 +638,7 @@ export default function CartView({ initialProducts }: CartViewProps) {
                         <div className="group relative">
                           <Info className="w-3.5 h-3.5 text-secondary/60 cursor-pointer" />
                           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-[#2e3131] text-white text-[10px] p-2.5 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-                            Estimated state Sales Tax computed based on boutique physical nexus variables.
+                            Tax is calculated in Shopify checkout according to your store tax settings.
                           </div>
                         </div>
                       </div>
