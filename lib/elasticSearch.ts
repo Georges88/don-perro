@@ -15,6 +15,9 @@ const SYNONYMS: Record<string, string[]> = {
   accessories: ["accessory", "collar", "leash", "harness"],
 };
 
+const DOG_TERMS = new Set(["dog", "dogs", "puppy", "puppies", "canine"]);
+const CAT_TERMS = new Set(["cat", "cats", "kitten", "kittens", "feline"]);
+
 interface SearchableField {
   value: string;
   weight: number;
@@ -22,7 +25,9 @@ interface SearchableField {
 
 export function searchProducts(products: Product[], query: string) {
   const normalizedQuery = normalizeText(query);
-  const queryTokens = expandTokens(tokenize(normalizedQuery));
+  const rawQueryTokens = tokenize(normalizedQuery);
+  const queryTokens = expandTokens(rawQueryTokens);
+  const speciesIntent = getSpeciesIntent(rawQueryTokens);
 
   if (!queryTokens.length) {
     return products.map((product) => ({ product, score: 0 }));
@@ -33,8 +38,27 @@ export function searchProducts(products: Product[], query: string) {
       product,
       score: scoreProduct(product, normalizedQuery, queryTokens),
     }))
-    .filter((result) => result.score > 0)
+    .filter((result) => result.score > 0 && matchesSpeciesIntent(result.product, speciesIntent))
     .sort((a, b) => b.score - a.score);
+}
+
+function getSpeciesIntent(queryTokens: string[]) {
+  const wantsDog = queryTokens.some((token) => DOG_TERMS.has(token));
+  const wantsCat = queryTokens.some((token) => CAT_TERMS.has(token));
+
+  if (wantsDog && !wantsCat) return "dog";
+  if (wantsCat && !wantsDog) return "cat";
+  return null;
+}
+
+function matchesSpeciesIntent(product: Product, speciesIntent: "dog" | "cat" | null) {
+  if (!speciesIntent) return true;
+
+  const speciesText = normalizeText(`${product.title} ${product.tags.join(" ")}`);
+  const speciesTokens = tokenize(speciesText);
+  const speciesTerms = speciesIntent === "dog" ? DOG_TERMS : CAT_TERMS;
+
+  return speciesTokens.some((token) => speciesTerms.has(token));
 }
 
 function scoreProduct(product: Product, normalizedQuery: string, queryTokens: string[]) {

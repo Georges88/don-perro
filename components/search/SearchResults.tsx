@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { 
@@ -33,11 +33,9 @@ interface SearchResultsProps {
 
 export default function SearchResults({ products }: SearchResultsProps) {
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   // URL search query
   const queryParam = searchParams.get("q") || "";
-  const categoryParam = searchParams.get("category") || "";
 
   // ----------------------------------------------------
   // Interactive Local Filter States
@@ -118,12 +116,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
     setSelectedFoodTypes([]);
     setHealthGoals([]);
     setPriceLimit(150);
-    setActiveQuery("");
     setCurrentPage(1);
-    // Update URL query string
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("q");
-    router.push(`/search?${params.toString()}`);
   };
 
   // Filter & Sort Logic
