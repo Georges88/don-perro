@@ -403,7 +403,7 @@ async function saveCustomerPhoneMetafield(
     const message = result.userErrors.map((error) => error.message).join(" ");
     if (message.toLowerCase().includes("access to this namespace and key")) {
       throw new Error(
-        "Shopify is not allowing this app to save the customer phone field yet. Create/enable the app-owned customer metafield definition for key phone, then try again.",
+        "Shopify is not allowing this app to save custom.phone yet. Enable Customer Account API read/write access on the customer metafield definition, save it, then try again.",
       );
     }
     throw new Error(message);
