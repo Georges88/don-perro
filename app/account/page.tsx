@@ -1048,25 +1048,9 @@ export default function AccountPage() {
                               exit={{ opacity: 0, height: 0 }}
                               className="border-t border-outline-variant/30 pt-4 mt-4 space-y-3 text-xs text-secondary overflow-hidden font-medium"
                             >
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1 bg-surface-container-low/30 p-3 rounded-xl border border-outline-variant/10">
-                                  <p className="font-bold text-on-surface">Order Number</p>
-                                  <p>{displayOrderNumber(order.id)}</p>
-                                </div>
-                                <div className="space-y-1 bg-surface-container-low/30 p-3 rounded-xl border border-outline-variant/10">
-                                  <p className="font-bold text-on-surface">Order Status</p>
-                                  <p>{order.status}</p>
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1 bg-surface-container-low/30 p-3 rounded-xl border border-outline-variant/10">
-                                  <p className="font-bold text-on-surface">Fulfillment</p>
-                                  <p>{formatRawStatus(order.fulfillmentStatus)}</p>
-                                </div>
-                                <div className="space-y-1 bg-surface-container-low/30 p-3 rounded-xl border border-outline-variant/10">
-                                  <p className="font-bold text-on-surface">Payment</p>
-                                  <p>{formatRawStatus(order.financialStatus)}</p>
-                                </div>
+                              <div className="space-y-1 bg-surface-container-low/30 p-3 rounded-xl border border-outline-variant/10">
+                                <p className="font-bold text-on-surface">Order Number</p>
+                                <p>{displayOrderNumber(order.id)}</p>
                               </div>
                               <div className="bg-surface-container-low/20 p-4 rounded-xl border border-outline-variant/20">
                                 <p className="font-bold text-on-surface mb-3">Order Items</p>

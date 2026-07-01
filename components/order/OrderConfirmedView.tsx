@@ -47,6 +47,9 @@ interface OrderData {
   total: number;
 }
 
+const CART_STORAGE_KEY = "don_perro_cart";
+const PENDING_CHECKOUT_KEY = "don_perro_pending_checkout";
+
 // Falling confetti particles logic
 class ConfettiParticle {
   x: number;
@@ -112,6 +115,10 @@ export default function OrderConfirmedView() {
   // Load from local storage or fall back to high-fidelity mockup defaults
   useEffect(() => {
     setMounted(true);
+    localStorage.setItem(CART_STORAGE_KEY, "[]");
+    localStorage.removeItem(PENDING_CHECKOUT_KEY);
+    window.dispatchEvent(new Event("cart-updated"));
+
     try {
       const saved = localStorage.getItem("don_perro_last_order");
       if (saved) {

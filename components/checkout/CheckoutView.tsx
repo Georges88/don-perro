@@ -33,6 +33,15 @@ interface CheckoutViewProps {
   initialProducts: Product[];
 }
 
+const PENDING_CHECKOUT_KEY = "don_perro_pending_checkout";
+
+function createCartFingerprint(items: CartItem[]) {
+  return items
+    .map((item) => `${item.selectedVariantId}:${item.quantity}`)
+    .sort()
+    .join("|");
+}
+
 export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -224,8 +233,10 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
         throw new Error(payload.error || "Unable to create Shopify checkout.");
       }
 
-      localStorage.setItem("don_perro_cart", "[]");
-      window.dispatchEvent(new Event("cart-updated"));
+      localStorage.setItem(PENDING_CHECKOUT_KEY, JSON.stringify({
+        startedAt: new Date().toISOString(),
+        cartFingerprint: createCartFingerprint(cartItems),
+      }));
       window.location.href = payload.checkoutUrl;
     } catch (error) {
       setIsProcessing(false);

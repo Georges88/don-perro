@@ -22,6 +22,25 @@ const PET_MENU_ITEMS = {
   ],
 };
 
+const CART_STORAGE_KEY = "don_perro_cart";
+const PENDING_CHECKOUT_KEY = "don_perro_pending_checkout";
+
+function createStoredCartFingerprint() {
+  try {
+    const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+    const parsed = savedCart ? JSON.parse(savedCart) : [];
+
+    if (!Array.isArray(parsed)) return "";
+
+    return parsed
+      .map((item) => `${item.selectedVariantId || ""}:${item.quantity || 1}`)
+      .sort()
+      .join("|");
+  } catch {
+    return "";
+  }
+}
+
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -73,6 +92,44 @@ export default function Header() {
     setIsAuthenticated(Boolean(getCurrentUser()));
   };
 
+  const clearCartAfterCompletedCheckout = async () => {
+    try {
+      const pendingRaw = localStorage.getItem(PENDING_CHECKOUT_KEY);
+      if (!pendingRaw) return;
+
+      const pending = JSON.parse(pendingRaw) as { startedAt?: string; cartFingerprint?: string };
+      if (!pending.startedAt || !pending.cartFingerprint) {
+        localStorage.removeItem(PENDING_CHECKOUT_KEY);
+        return;
+      }
+
+      if (createStoredCartFingerprint() !== pending.cartFingerprint) {
+        localStorage.removeItem(PENDING_CHECKOUT_KEY);
+        return;
+      }
+
+      const ordersResponse = await fetch("/api/account/orders", { cache: "no-store" });
+      if (!ordersResponse.ok) return;
+
+      const payload = await ordersResponse.json();
+      const orders = Array.isArray(payload.orders) ? payload.orders : [];
+      const checkoutStartedAt = new Date(pending.startedAt).getTime() - 10 * 60 * 1000;
+      const hasNewOrder = orders.some((order) => {
+        const processedAt = typeof order.processedAt === "string" ? new Date(order.processedAt).getTime() : 0;
+        return Number.isFinite(processedAt) && processedAt >= checkoutStartedAt;
+      });
+
+      if (!hasNewOrder) return;
+
+      localStorage.setItem(CART_STORAGE_KEY, "[]");
+      localStorage.removeItem(PENDING_CHECKOUT_KEY);
+      updateCartCount();
+      window.dispatchEvent(new Event("cart-updated"));
+    } catch (error) {
+      console.error("Unable to clear cart after checkout", error);
+    }
+  };
+
   const updateServerAuthState = async () => {
     try {
       const response = await fetch("/api/auth/me", { cache: "no-store" });
@@ -93,6 +150,7 @@ export default function Header() {
     updateCartCount();
     updateWishlistCount();
     updateServerAuthState();
+    clearCartAfterCompletedCheckout();
 
     const handleStorageChange = () => {
       updateCartCount();

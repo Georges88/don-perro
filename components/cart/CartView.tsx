@@ -34,6 +34,15 @@ interface CartViewProps {
   initialProducts: Product[];
 }
 
+const PENDING_CHECKOUT_KEY = "don_perro_pending_checkout";
+
+function createCartFingerprint(items: CartItem[]) {
+  return items
+    .map((item) => `${item.selectedVariantId}:${item.quantity}`)
+    .sort()
+    .join("|");
+}
+
 export default function CartView({ initialProducts }: CartViewProps) {
   // Find initial items from our standard catalog to bootstrap the exact cart if none exists in localStorage
   const kibbleProduct = initialProducts.find(p => p.handle === "wilderness-peak-organic-kibble");
@@ -240,6 +249,10 @@ export default function CartView({ initialProducts }: CartViewProps) {
         throw new Error(checkoutPayload.error || "Unable to create Shopify checkout.");
       }
 
+      localStorage.setItem(PENDING_CHECKOUT_KEY, JSON.stringify({
+        startedAt: new Date().toISOString(),
+        cartFingerprint: createCartFingerprint(cartItems),
+      }));
       window.location.href = checkoutPayload.checkoutUrl;
     } catch (error) {
       console.error(error);
