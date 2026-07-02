@@ -532,7 +532,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="relative left-1/2 mt-8 flex w-screen -translate-x-1/2 justify-center select-none">
+            <div className="mt-8 flex justify-center select-none">
               <div className="inline-flex items-center justify-center gap-3">
                 <button 
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}

@@ -26,7 +26,7 @@ import {
 import FormNotice from "@/components/ui/FormNotice";
 import { AuthUser, clearAuthSession, getCurrentUser, getSavedCustomerProfile, setCurrentUser } from "@/lib/auth";
 import { getWishlist, setWishlist } from "@/lib/wishlist";
-import { getDefaultVariant, hasVariantPriceRange } from "@/lib/pricing";
+import { getDefaultVariant, hasVariantPriceRange, isDefaultVariantTitle } from "@/lib/pricing";
 import { Product } from "@/types/shopify";
 
 // Types
@@ -1060,7 +1060,7 @@ export default function AccountPage() {
                                               <h4 className="line-clamp-1 text-sm font-bold text-on-surface">
                                                 {item.title}
                                               </h4>
-                                              {item.variantTitle && item.variantTitle !== "Default" && (
+                                              {item.variantTitle && !isDefaultVariantTitle(item.variantTitle) && (
                                                 <p className="mt-0.5 text-[11px] font-medium text-secondary/80">
                                                   <span className="font-bold">Size:</span> {item.variantTitle}
                                                 </p>

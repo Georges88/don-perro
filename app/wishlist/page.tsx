@@ -13,7 +13,7 @@ import {
   X
 } from "lucide-react";
 import { Product } from "@/types/shopify";
-import { clearWishlist, getWishlist } from "@/lib/wishlist";
+import { clearWishlist, getWishlist, setWishlist } from "@/lib/wishlist";
 import { getDefaultVariant, hasVariantPriceRange } from "@/lib/pricing";
 import ProductCardActions from "@/components/shop/ProductCardActions";
 import { mockProducts } from "@/data/mockData";
@@ -56,6 +56,14 @@ export default function WishlistPage() {
     if (clearWishlist()) {
       setShowClearConfirmation(false);
       showNotice("Your wishlist has been cleared.");
+    }
+  };
+
+  const handleRemoveFromWishlist = (product: Product) => {
+    const updated = wishlistItems.filter((item) => item.id !== product.id);
+    if (setWishlist(updated)) {
+      setWishlistItems(updated);
+      showNotice(`Removed "${product.title}" from your wishlist.`);
     }
   };
 
@@ -235,6 +243,16 @@ export default function WishlistPage() {
                         }}
                       />
                     </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFromWishlist(product)}
+                      aria-label={`Remove ${product.title} from wishlist`}
+                      title="Remove from wishlist"
+                      className="absolute left-2.5 top-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-error opacity-0 shadow-sm transition-all hover:bg-white hover:scale-105 focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/35 group-hover:opacity-100"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
 
                     <ProductCardActions product={product} className="absolute right-2.5 top-2.5 z-10" />
                   </div>

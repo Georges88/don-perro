@@ -20,7 +20,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { Product } from "@/types/shopify";
-import { getDefaultVariant, getSelectedVariantAmount, hydrateCartLines } from "@/lib/pricing";
+import { getDefaultVariant, getSelectedVariantAmount, hydrateCartLines, isDefaultVariantTitle } from "@/lib/pricing";
 
 interface CartItem {
   product: Product;
@@ -801,9 +801,11 @@ export default function CheckoutView({ initialProducts }: CheckoutViewProps) {
                         </div>
                         <div className="flex-grow flex flex-col justify-center">
                           <h4 className="font-bold text-xs md:text-sm text-on-surface line-clamp-1 mb-0.5">{item.product.title}</h4>
-                          <p className="text-[11px] text-secondary/80 font-medium">
-                            <span className="font-bold">Size:</span> {item.selectedVariantTitle}
-                          </p>
+                          {!isDefaultVariantTitle(item.selectedVariantTitle) && (
+                            <p className="text-[11px] text-secondary/80 font-medium">
+                              <span className="font-bold">Size:</span> {item.selectedVariantTitle}
+                            </p>
+                          )}
                           {item.quantity > 1 && (
                             <p className="text-[10px] text-secondary/65 font-bold uppercase tracking-wider mt-0.5">Qty: {item.quantity}</p>
                           )}

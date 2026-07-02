@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { Product } from "@/types/shopify";
 import { getWishlist, toggleWishlist, isInWishlist } from "@/lib/wishlist";
-import { formatMoney, getDefaultVariant, getSelectedVariant, getSelectedVariantCompareAtPrice, getSelectedVariantPrice, hasVariantPriceRange } from "@/lib/pricing";
+import { formatMoney, getDefaultVariant, getSelectedVariant, getSelectedVariantCompareAtPrice, getSelectedVariantPrice, hasVariantPriceRange, hasVisibleVariants } from "@/lib/pricing";
 import ProductCardActions from "@/components/shop/ProductCardActions";
 
 interface ProductDetailsProps {
@@ -25,6 +25,9 @@ interface ProductDetailsProps {
 }
 
 export default function ProductDetails({ product, allProducts }: ProductDetailsProps) {
+  const productVariants = product.variants || [];
+  const showVariantSelector = hasVisibleVariants(product);
+
   // Image gallery state
   const galleryImages = product.images && product.images.length > 0 
     ? product.images 
@@ -85,7 +88,9 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
   // Add to Cart Simulation
   const handleAddToCart = () => {
     // Find matching variant based on selected size
-    const selectedVariant = product.variants?.find(v => v.title === selectedSize) || getSelectedVariant(product);
+    const selectedVariant = showVariantSelector
+      ? productVariants.find(v => v.title === selectedSize) || getSelectedVariant(product)
+      : getSelectedVariant(product);
     const selectedVariantId = selectedVariant?.id || `var_${product.id}_1`;
     const selectedVariantTitle = selectedVariant?.title || "Default Title";
 
@@ -137,7 +142,9 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
   };
 
   // Safe Parsing numeric elements
-  const selectedVariant = product.variants?.find(v => v.title === selectedSize) || getSelectedVariant(product);
+  const selectedVariant = showVariantSelector
+    ? productVariants.find(v => v.title === selectedSize) || getSelectedVariant(product)
+    : getSelectedVariant(product);
   const selectedVariantId = selectedVariant?.id;
   const selectedPrice = getSelectedVariantPrice(product, selectedVariantId);
   const selectedCompareAtPrice = getSelectedVariantCompareAtPrice(product, selectedVariantId);
@@ -263,14 +270,14 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
               </div>
             </div>
 
-            {/* Custom Variants Selector (Size) if more than 1 option */}
-            {product.variants.length > 0 && (
+            {/* Custom Variants Selector (Size) */}
+            {showVariantSelector && (
               <div className="space-y-3">
                 <span className="text-xs font-bold text-[#191c1c] uppercase tracking-wider block">
                   Select Size
                 </span>
                 <div className="flex flex-wrap gap-2.5 select-none">
-                  {product.variants.map((v) => {
+                  {productVariants.map((v) => {
                     const isActive = selectedSize === v.title;
                     return (
                       <button

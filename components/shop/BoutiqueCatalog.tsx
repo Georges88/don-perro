@@ -52,15 +52,18 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortOption, setSortOption] = useState<string>("Newest Arrivals");
   const [isSortOpen, setIsSortOpen] = useState<boolean>(false);
+  const [isItemsPerPageOpen, setIsItemsPerPageOpen] = useState<boolean>(false);
   const sortOptions = [
     "Newest Arrivals",
     "Best Selling",
     "Price: Low to High",
     "Price: High to Low"
   ];
+  const itemsPerPageOptions = [10, 15, 20];
   
   // UI Layout States
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState<boolean>(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [cartModalItem, setCartModalItem] = useState<{ product: Product; quantity: number; selectedVariantId: string } | null>(null);
@@ -102,9 +105,6 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
     setSearchQuery(searchQueryParam || "");
     setCurrentPage(1);
   }, [searchParams]);
-
-  // Page Size definition
-  const pageSize = 6;
 
   // ----------------------------------------------------
   // Hardcoded items tags & badges details mapping
@@ -211,18 +211,28 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
 
   // Calculate Paginated variables
   const totalProducts = filteredAndSortedProducts.length;
-  const totalPages = Math.max(1, Math.ceil(totalProducts / pageSize));
+  const totalPages = Math.max(1, Math.ceil(totalProducts / itemsPerPage));
   
   // Safe adjust page
   const activePage = Math.min(currentPage, totalPages);
-  const startIndex = (activePage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalProducts);
+  const startIndex = (activePage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalProducts);
   const paginatedProducts = filteredAndSortedProducts.slice(startIndex, endIndex);
   const firstVisiblePage = Math.max(1, Math.min(activePage - 2, totalPages - 4));
   const visiblePages = Array.from(
     { length: Math.min(5, totalPages) },
     (_, index) => firstVisiblePage + index,
   );
+
+  const scrollToShopTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const goToPage = (page: number) => {
+    const nextPage = Math.min(Math.max(1, page), totalPages);
+    setCurrentPage(nextPage);
+    scrollToShopTop();
+  };
 
   // Add Item to Cart
   const handleAddToCart = (product: Product, e?: React.MouseEvent) => {
@@ -537,13 +547,16 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
               <div>
                 
                 {/* Result metadata stats */}
-                <div className="flex justify-between items-center text-xs text-secondary/70 mb-4 font-sans font-medium px-1">
+                <div className="flex flex-wrap justify-between items-center gap-3 text-xs text-secondary/70 mb-4 font-sans font-medium px-1">
+                  <div className="flex flex-wrap items-center gap-3">
                   <span>
                     Showing <span className="text-primary font-bold font-mono">{startIndex + 1}</span>–
                     <span className="text-primary font-bold font-mono">{endIndex}</span> of{" "}
                     <span className="text-primary font-bold font-mono">{totalProducts}</span> premium goods
                   </span>
                   
+                  </div>
+
                   {/* Clean badge indicators */}
                   <div className="hidden sm:flex items-center gap-2">
                     {selectedCategories.map(cat => (
@@ -556,6 +569,61 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                         {typ}
                       </span>
                     ))}
+                  </div>
+
+                  <div className="relative ml-auto">
+                    <button
+                      type="button"
+                      onClick={() => setIsItemsPerPageOpen(!isItemsPerPageOpen)}
+                      className="flex items-center gap-2 bg-surface-container-low px-4 py-2.5 border border-outline/10 rounded-full hover:border-outline/40 transition-all text-xs font-bold text-primary cursor-pointer active:scale-98 select-none"
+                      aria-label="Products per page"
+                    >
+                      <span className="text-xs font-semibold text-secondary whitespace-nowrap">Show:</span>
+                      <span className="text-xs font-bold text-primary flex items-center gap-1">
+                        {itemsPerPage}
+                        <ChevronDown className={`w-3.5 h-3.5 text-primary transition-transform duration-200 ${isItemsPerPageOpen ? "rotate-180" : ""}`} />
+                      </span>
+                    </button>
+
+                    <AnimatePresence>
+                      {isItemsPerPageOpen && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-20 cursor-default"
+                            onClick={() => setIsItemsPerPageOpen(false)}
+                          />
+                          <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            transition={{ duration: 0.15, ease: "easeOut" }}
+                            className="absolute right-0 mt-2 w-28 bg-white border border-outline/10 rounded-xl shadow-[0px_10px_30px_rgba(90,96,90,0.08)] py-1.5 z-30 overflow-hidden"
+                          >
+                            {itemsPerPageOptions.map((count) => (
+                              <button
+                                key={count}
+                                type="button"
+                                onClick={() => {
+                                  setItemsPerPage(count);
+                                  setIsItemsPerPageOpen(false);
+                                  setCurrentPage(1);
+                                }}
+                                className={`w-full text-left px-4 py-2 text-xs font-semibold transition-colors flex items-center justify-between cursor-pointer ${
+                                  itemsPerPage === count
+                                    ? "bg-primary-container/20 text-primary font-bold"
+                                    : "text-secondary hover:bg-surface-container-low hover:text-on-surface"
+                                }`}
+                              >
+                                <span>{count}</span>
+                                {itemsPerPage === count && (
+                                  <Check className="w-3.5 h-3.5 text-primary" />
+                                )}
+                              </button>
+                            ))}
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
 
@@ -683,10 +751,10 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
 
                 {/* Simulated Paginator */}
                 {totalPages > 1 && (
-                  <div className="relative left-1/2 mt-16 flex w-screen -translate-x-1/2 justify-center">
+                  <div className="mt-16 flex justify-center">
                     <div className="inline-flex items-center justify-center gap-2">
                       <button 
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        onClick={() => goToPage(activePage - 1)}
                         disabled={activePage === 1}
                         className="p-2 border border-outline/10 hover:border-primary rounded-full text-secondary hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none"
                       >
@@ -699,7 +767,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                         return (
                           <button 
                             key={pageNum}
-                            onClick={() => setCurrentPage(pageNum)}
+                            onClick={() => goToPage(pageNum)}
                             className={`w-10 h-10 rounded-full font-bold flex items-center justify-center transition-all ${
                               isActive 
                                 ? "bg-primary text-white shadow-md animate-fade-in" 
@@ -712,7 +780,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                       })}
 
                       <button 
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        onClick={() => goToPage(activePage + 1)}
                         disabled={activePage === totalPages}
                         className="p-2 border border-outline/10 hover:border-primary rounded-full text-secondary hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none"
                       >

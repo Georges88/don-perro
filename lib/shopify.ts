@@ -41,6 +41,39 @@ const CATALOG_QUERY = `#graphql
   }
 `;
 
+const PRODUCTS_QUERY = `#graphql
+  query ProductsPage($first: Int!, $after: String) {
+    products(first: $first, after: $after) {
+      nodes {
+        id
+        title
+        handle
+        description
+        vendor
+        productType
+        tags
+        featuredImage { url altText width height }
+        images(first: 10) { nodes { url altText width height } }
+        priceRange { minVariantPrice { amount currencyCode } }
+        compareAtPriceRange { minVariantPrice { amount currencyCode } }
+        variants(first: 100) {
+          nodes {
+            id
+            title
+            availableForSale
+            price { amount currencyCode }
+            compareAtPrice { amount currencyCode }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
+
 const CART_CREATE_MUTATION = `#graphql
   mutation CreateCart($input: CartInput!) {
     cartCreate(input: $input) {
@@ -90,6 +123,16 @@ interface ShopifyCatalogCollection {
 interface CatalogResponse {
   products: { nodes: ShopifyCatalogProduct[] };
   collections: { nodes: ShopifyCatalogCollection[] };
+}
+
+interface ProductsPageResponse {
+  products: {
+    nodes: ShopifyCatalogProduct[];
+    pageInfo: {
+      hasNextPage: boolean;
+      endCursor: string | null;
+    };
+  };
 }
 
 interface CartCreateResponse {
@@ -182,6 +225,29 @@ function hasShopifyErrors(errors: unknown) {
 
 async function getCatalog(): Promise<CatalogResponse> {
   return shopifyFetch<CatalogResponse>(CATALOG_QUERY);
+}
+
+async function getAllProducts(): Promise<ShopifyCatalogProduct[]> {
+  const products: ShopifyCatalogProduct[] = [];
+  let after: string | null = null;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    const data = await shopifyFetch<ProductsPageResponse>(
+      PRODUCTS_QUERY,
+      { first: 250, after },
+    );
+
+    products.push(...data.products.nodes);
+    hasNextPage = data.products.pageInfo.hasNextPage;
+    after = data.products.pageInfo.endCursor;
+
+    if (hasNextPage && !after) {
+      throw new Error("Shopify product pagination did not return a next cursor.");
+    }
+  }
+
+  return products;
 }
 
 export async function createShopifyCart(
@@ -287,7 +353,7 @@ async function withMockFallback<T>(load: () => Promise<T>, fallback: T, label: s
 
 export async function getProducts(): Promise<Product[]> {
   return withMockFallback(
-    async () => (await getCatalog()).products.nodes.map(mapProduct),
+    async () => (await getAllProducts()).map(mapProduct),
     mockProducts,
     "products",
   );

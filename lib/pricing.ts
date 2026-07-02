@@ -35,6 +35,16 @@ export function hasVariantPriceRange(product: Product): boolean {
   return prices.length > 1 && Math.min(...prices) !== Math.max(...prices);
 }
 
+export function isDefaultVariantTitle(title?: string): boolean {
+  const normalizedTitle = title?.trim().toLowerCase();
+  return normalizedTitle === "default" || normalizedTitle === "default title";
+}
+
+export function hasVisibleVariants(product: Product): boolean {
+  const variants = product.variants || [];
+  return variants.length > 1 || variants.some((variant) => !isDefaultVariantTitle(variant.title));
+}
+
 export function formatMoney(money: MoneyV2, quantity = 1): string {
   const amount = (Number(money.amount) || 0) * quantity;
   return new Intl.NumberFormat("en-US", {

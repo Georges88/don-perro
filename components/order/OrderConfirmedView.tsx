@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Product } from "@/types/shopify";
 import FormNotice from "@/components/ui/FormNotice";
+import { isDefaultVariantTitle } from "@/lib/pricing";
 
 interface OrderItem {
   product: Product;
@@ -491,9 +492,11 @@ export default function OrderConfirmedView() {
                             {item.product.title}
                           </Link>
                         </h4>
-                        <p className="font-label-sm text-secondary text-xs mt-1">
-                          <span className="font-bold">Size:</span> {item.selectedVariantTitle}
-                        </p>
+                        {!isDefaultVariantTitle(item.selectedVariantTitle) && (
+                          <p className="font-label-sm text-secondary text-xs mt-1">
+                            <span className="font-bold">Size:</span> {item.selectedVariantTitle}
+                          </p>
+                        )}
                         <p className="font-label-sm text-secondary text-xs mt-0.5">
                           Qty: {item.quantity}
                         </p>

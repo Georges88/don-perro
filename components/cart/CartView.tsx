@@ -19,7 +19,7 @@ import {
   Sparkles 
 } from "lucide-react";
 import { Product } from "@/types/shopify";
-import { getDefaultVariant, getSelectedVariantAmount, hydrateCartLines } from "@/lib/pricing";
+import { getDefaultVariant, getSelectedVariantAmount, hydrateCartLines, isDefaultVariantTitle } from "@/lib/pricing";
 import ProductCardActions from "@/components/shop/ProductCardActions";
 
 // Define Cart Item interface
@@ -566,9 +566,11 @@ export default function CartView({ initialProducts }: CartViewProps) {
                               >
                                 {item.product.title}
                               </Link>
-                              <div className="text-xs text-secondary/80 font-medium mb-3 space-y-0.5">
-                                <p><span className="font-bold text-secondary">Size:</span> {item.selectedVariantTitle}</p>
-                              </div>
+                              {!isDefaultVariantTitle(item.selectedVariantTitle) && (
+                                <div className="text-xs text-secondary/80 font-medium mb-3 space-y-0.5">
+                                  <p><span className="font-bold text-secondary">Size:</span> {item.selectedVariantTitle}</p>
+                                </div>
+                              )}
                               
                               <button 
                                 onClick={() => handleRemoveItem(lineIndex)}
