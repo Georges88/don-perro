@@ -218,6 +218,11 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   const startIndex = (activePage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalProducts);
   const paginatedProducts = filteredAndSortedProducts.slice(startIndex, endIndex);
+  const firstVisiblePage = Math.max(1, Math.min(activePage - 2, totalPages - 4));
+  const visiblePages = Array.from(
+    { length: Math.min(5, totalPages) },
+    (_, index) => firstVisiblePage + index,
+  );
 
   // Add Item to Cart
   const handleAddToCart = (product: Product, e?: React.MouseEvent) => {
@@ -678,41 +683,42 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
 
                 {/* Simulated Paginator */}
                 {totalPages > 1 && (
-                  <div className="mt-16 flex justify-center items-center gap-2">
-                    <button 
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={activePage === 1}
-                      className="p-2 border border-outline/10 hover:border-primary rounded-full text-secondary hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    
-                    {Array.from({ length: totalPages }).map((_, i) => {
-                      const pageNum = i + 1;
-                      const isActive = activePage === pageNum;
+                  <div className="mt-16 flex w-full justify-center">
+                    <div className="inline-flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={activePage === 1}
+                        className="p-2 border border-outline/10 hover:border-primary rounded-full text-secondary hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      
+                      {visiblePages.map((pageNum) => {
+                        const isActive = activePage === pageNum;
 
-                      return (
-                        <button 
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`w-10 h-10 rounded-full font-bold flex items-center justify-center transition-all ${
-                            isActive 
-                              ? "bg-primary text-white shadow-md animate-fade-in" 
-                              : "hover:bg-surface-container-high text-on-surface"
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+                        return (
+                          <button 
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`w-10 h-10 rounded-full font-bold flex items-center justify-center transition-all ${
+                              isActive 
+                                ? "bg-primary text-white shadow-md animate-fade-in" 
+                                : "hover:bg-surface-container-high text-on-surface"
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
 
-                    <button 
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      disabled={activePage === totalPages}
-                      className="p-2 border border-outline/10 hover:border-primary rounded-full text-secondary hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                      <button 
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={activePage === totalPages}
+                        className="p-2 border border-outline/10 hover:border-primary rounded-full text-secondary hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

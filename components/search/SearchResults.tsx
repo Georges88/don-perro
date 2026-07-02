@@ -141,9 +141,15 @@ export default function SearchResults({ products }: SearchResultsProps) {
   // Pagination bounds
   const totalItems = sortedProducts.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  const indexOfLastItem = currentPage * itemsPerPage;
+  const activePage = Math.min(currentPage, totalPages);
+  const indexOfLastItem = activePage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = sortedProducts.slice(indexOfFirstItem, indexOfLastItem);
+  const firstVisiblePage = Math.max(1, Math.min(activePage - 2, totalPages - 4));
+  const visiblePages = Array.from(
+    { length: Math.min(5, totalPages) },
+    (_, index) => firstVisiblePage + index,
+  );
 
   const getBadge = (product: Product) => {
     if (product.tags.includes("new")) return { text: "New", class: "bg-primary text-white" };
@@ -526,42 +532,44 @@ export default function SearchResults({ products }: SearchResultsProps) {
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="mt-8 flex justify-center items-center gap-3 select-none">
-              <button 
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className={`w-9 h-9 flex items-center justify-center rounded-full border border-outline text-secondary hover:bg-surface-container-low transition-colors ${
-                  currentPage === 1 ? "opacity-30 cursor-not-allowed" : "cursor-pointer"
-                }`}
-                aria-label="Previous Page"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                <button
-                  key={pageNum}
-                  onClick={() => setCurrentPage(pageNum)}
-                  className={`w-9 h-9 flex items-center justify-center rounded-full text-xs font-bold transition-all cursor-pointer ${
-                    currentPage === pageNum 
-                      ? "bg-primary text-white scale-105 shadow-md" 
-                      : "text-secondary hover:bg-surface-container-low"
+            <div className="mt-8 flex w-full justify-center select-none">
+              <div className="inline-flex items-center justify-center gap-3">
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={activePage === 1}
+                  className={`w-9 h-9 flex items-center justify-center rounded-full border border-outline text-secondary hover:bg-surface-container-low transition-colors ${
+                    activePage === 1 ? "opacity-30 cursor-not-allowed" : "cursor-pointer"
                   }`}
+                  aria-label="Previous Page"
                 >
-                  {pageNum}
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
-              ))}
 
-              <button 
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className={`w-9 h-9 flex items-center justify-center rounded-full border border-outline text-secondary hover:bg-surface-container-low transition-colors ${
-                  currentPage === totalPages ? "opacity-30 cursor-not-allowed" : "cursor-pointer"
-                }`}
-                aria-label="Next Page"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+                {visiblePages.map(pageNum => (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`w-9 h-9 flex items-center justify-center rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      activePage === pageNum 
+                        ? "bg-primary text-white scale-105 shadow-md" 
+                        : "text-secondary hover:bg-surface-container-low"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={activePage === totalPages}
+                  className={`w-9 h-9 flex items-center justify-center rounded-full border border-outline text-secondary hover:bg-surface-container-low transition-colors ${
+                    activePage === totalPages ? "opacity-30 cursor-not-allowed" : "cursor-pointer"
+                  }`}
+                  aria-label="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
 
