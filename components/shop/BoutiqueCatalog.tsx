@@ -683,7 +683,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
 
                 {/* Simulated Paginator */}
                 {totalPages > 1 && (
-                  <div className="mt-16 flex w-full justify-center">
+                  <div className="relative left-1/2 mt-16 flex w-screen -translate-x-1/2 justify-center">
                     <div className="inline-flex items-center justify-center gap-2">
                       <button 
                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
