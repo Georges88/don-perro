@@ -6,21 +6,32 @@ import Link from "next/link";
 import { Search, ShoppingCart, User, Menu, X, Heart, ChevronDown } from "lucide-react";
 import { getWishlist } from "@/lib/wishlist";
 import { getCurrentUser } from "@/lib/auth";
+import type { MenuItem } from "@/types/shopify";
 
-const PET_MENU_ITEMS = {
-  dog: [
-    { label: "Dog Food", href: "/shop?category=dog&type=Organic%20Food" },
-    { label: "Dog Treats", href: "/shop?category=dog&type=Treats" },
-    { label: "Dog Toys", href: "/shop?category=dog&type=Interactive%20Toys" },
-    { label: "Dog Accessories", href: "/shop?category=dog&type=Accessories" },
-  ],
-  cat: [
-    { label: "Cat Food", href: "/shop?category=cat&type=Organic%20Food" },
-    { label: "Cat Treats", href: "/shop?category=cat&type=Treats" },
-    { label: "Cat Toys", href: "/shop?category=cat&type=Interactive%20Toys" },
-    { label: "Cat Accessories", href: "/shop?category=cat&type=Accessories" },
-  ],
-};
+const FALLBACK_NAV_ITEMS: MenuItem[] = [
+  { label: "Shop All", href: "/shop", items: [] },
+  {
+    label: "Dogs",
+    href: "/shop?category=dog",
+    items: [
+      { label: "Dog Food", href: "/shop?category=dog&type=Organic%20Food", items: [] },
+      { label: "Dog Treats", href: "/shop?category=dog&type=Treats", items: [] },
+      { label: "Dog Toys", href: "/shop?category=dog&type=Interactive%20Toys", items: [] },
+      { label: "Dog Accessories", href: "/shop?category=dog&type=Accessories", items: [] },
+    ],
+  },
+  {
+    label: "Cats",
+    href: "/shop?category=cat",
+    items: [
+      { label: "Cat Food", href: "/shop?category=cat&type=Organic%20Food", items: [] },
+      { label: "Cat Treats", href: "/shop?category=cat&type=Treats", items: [] },
+      { label: "Cat Toys", href: "/shop?category=cat&type=Interactive%20Toys", items: [] },
+      { label: "Cat Accessories", href: "/shop?category=cat&type=Accessories", items: [] },
+    ],
+  },
+  { label: "New Arrivals", href: "/shop?sort=Newest+Arrivals", items: [] },
+];
 
 const CART_STORAGE_KEY = "don_perro_cart";
 const PENDING_CHECKOUT_KEY = "don_perro_pending_checkout";
@@ -43,24 +54,48 @@ function createStoredCartFingerprint() {
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [navItems, setNavItems] = useState<MenuItem[]>(FALLBACK_NAV_ITEMS);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   // Active navigation queries
-  const isShopAllActive = pathname === "/shop" && !searchParams.get("category") && !searchParams.get("sort");
-  const isDogsActive = pathname === "/shop" && searchParams.get("category") === "dog";
-  const isCatsActive = pathname === "/shop" && searchParams.get("category") === "cat";
-  const isNewArrivalsActive = pathname === "/shop" && searchParams.get("sort") === "Newest Arrivals";
-
   const isWishlistActive = pathname === "/wishlist";
   const isCartActive = pathname === "/cart";
   const isAccountActive = pathname === "/account";
   const isSearchActive = pathname === "/search";
+
+  const isSelfNavItemActive = (item: MenuItem) => {
+    if (item.href === "/shop") {
+      return pathname === "/shop"
+        && !searchParams.get("category")
+        && !searchParams.get("sort")
+        && !searchParams.get("tag")
+        && !searchParams.get("collection");
+    }
+
+    if (item.href.startsWith("/shop?")) {
+      const params = new URLSearchParams(item.href.split("?")[1]);
+      return pathname === "/shop" && Array.from(params.entries()).every(([key, value]) => searchParams.get(key) === value);
+    }
+
+    return pathname === item.href;
+  };
+
+  const activeNavKey = (() => {
+    const directMatch = navItems.find(isSelfNavItemActive);
+    if (directMatch) return `${directMatch.label}-${directMatch.href}`;
+
+    const childMatch = navItems.find(item => item.items.some(isSelfNavItemActive));
+    if (childMatch) return `${childMatch.label}-${childMatch.href}`;
+
+    return "";
+  })();
 
   const updateCartCount = () => {
     try {
@@ -173,6 +208,32 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
+    async function loadMenu() {
+      try {
+        const response = await fetch("/api/menu?handle=main-menu", { cache: "no-store" });
+        if (!response.ok) return;
+
+        const payload = await response.json();
+        const items = payload?.menu?.items;
+
+        if (isMounted && Array.isArray(items) && items.length > 0) {
+          setNavItems(items);
+        }
+      } catch (error) {
+        console.error("Unable to load Shopify menu", error);
+      }
+    }
+
+    loadMenu();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (pathname === "/search") {
       setSearchQuery(searchParams.get("q") || "");
     }
@@ -195,6 +256,7 @@ export default function Header() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      setIsMobileSearchOpen(false);
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     } else {
       router.push("/search");
@@ -211,78 +273,55 @@ export default function Header() {
 
         {/* Navigation Links (Desktop) */}
         <div className="hidden md:flex items-center gap-8">
-          <Link 
-            href="/shop" 
-            className={`text-sm font-semibold tracking-wide font-sans transition-colors duration-200 ${
-              isShopAllActive 
-                ? "text-primary underline underline-offset-[6px] decoration-2 decoration-primary font-bold" 
-                : "text-secondary hover:text-primary"
-            }`}
-          >
-            Shop All
-          </Link>
-          <div className="group relative">
-            <Link 
-              href="/shop?category=dog" 
-              className={`inline-flex items-center gap-1 text-sm font-semibold tracking-wide font-sans transition-colors duration-200 ${
-                isDogsActive 
-                  ? "text-primary underline underline-offset-[6px] decoration-2 decoration-primary font-bold" 
-                  : "text-secondary hover:text-primary"
-              }`}
-            >
-              Dogs
-              <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
-            </Link>
-            <div className="invisible absolute left-1/2 top-full z-50 w-48 -translate-x-1/2 pt-4 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
-              <div className="overflow-hidden rounded-xl border border-outline/10 bg-white py-1.5 shadow-[0px_14px_35px_rgba(90,96,90,0.12)]">
-                {PET_MENU_ITEMS.dog.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="block px-4 py-2.5 text-xs font-bold text-secondary transition-colors hover:bg-primary-container/15 hover:text-primary"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+          {navItems.map((item) => {
+            const navKey = `${item.label}-${item.href}`;
+            const isActive = activeNavKey === navKey;
+
+            if (item.items.length === 0) {
+              return (
+                <Link
+                  key={`${item.label}-${item.href}`}
+                  href={item.href}
+                  className={`text-sm font-semibold tracking-wide font-sans transition-colors duration-200 ${
+                    isActive
+                      ? "text-primary underline underline-offset-[6px] decoration-2 decoration-primary font-bold"
+                      : "text-secondary hover:text-primary"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            }
+
+            return (
+              <div key={`${item.label}-${item.href}`} className="group relative">
+                <button
+                  type="button"
+                  className={`inline-flex items-center gap-1 text-sm font-semibold tracking-wide font-sans transition-colors duration-200 ${
+                    isActive
+                      ? "text-primary underline underline-offset-[6px] decoration-2 decoration-primary font-bold"
+                      : "text-secondary hover:text-primary"
+                  }`}
+                >
+                  {item.label}
+                  <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
+                </button>
+                <div className="invisible absolute left-1/2 top-full z-50 w-48 -translate-x-1/2 pt-4 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
+                  <div className="overflow-hidden rounded-xl border border-outline/10 bg-white py-1.5 shadow-[0px_14px_35px_rgba(90,96,90,0.12)]">
+                    {item.items.map((child) => (
+                      <Link
+                        key={`${child.label}-${child.href}`}
+                        href={child.href}
+                        className="block px-4 py-2.5 text-xs font-bold text-secondary transition-colors hover:bg-primary-container/15 hover:text-primary"
+                      >
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          <div className="group relative">
-            <Link 
-              href="/shop?category=cat" 
-              className={`inline-flex items-center gap-1 text-sm font-semibold tracking-wide font-sans transition-colors duration-200 ${
-                isCatsActive 
-                  ? "text-primary underline underline-offset-[6px] decoration-2 decoration-primary font-bold" 
-                  : "text-secondary hover:text-primary"
-              }`}
-            >
-              Cats
-              <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
-            </Link>
-            <div className="invisible absolute left-1/2 top-full z-50 w-48 -translate-x-1/2 pt-4 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
-              <div className="overflow-hidden rounded-xl border border-outline/10 bg-white py-1.5 shadow-[0px_14px_35px_rgba(90,96,90,0.12)]">
-                {PET_MENU_ITEMS.cat.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="block px-4 py-2.5 text-xs font-bold text-secondary transition-colors hover:bg-primary-container/15 hover:text-primary"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-          <Link 
-            href="/shop?sort=Newest+Arrivals" 
-            className={`text-sm font-semibold tracking-wide font-sans transition-colors duration-200 ${
-              isNewArrivalsActive 
-                ? "text-primary underline underline-offset-[6px] decoration-2 decoration-primary font-bold" 
-                : "text-secondary hover:text-primary"
-            }`}
-          >
-            New Arrivals
-          </Link>
+            );
+          })}
         </div>
 
         {/* Actions & Search */}
@@ -304,17 +343,21 @@ export default function Header() {
             }`} />
           </form>
 
-          <Link
-            href="/search"
+          <button
+            type="button"
+            onClick={() => {
+              setIsMobileSearchOpen((value) => !value);
+              setIsMobileMenuOpen(false);
+            }}
             className={`p-2 transition-all rounded-full border ${
-              isSearchActive 
+              isSearchActive || isMobileSearchOpen
                 ? "text-primary bg-primary/10 border-primary/20 shadow-sm" 
                 : "text-secondary hover:text-primary hover:bg-secondary/5 border-transparent"
             } lg:hidden`}
             aria-label="Search Catalog"
           >
             <Search className="w-5 h-5" />
-          </Link>
+          </button>
           
           <Link 
             href="/wishlist"
@@ -373,78 +416,72 @@ export default function Header() {
         </div>
       </nav>
 
+      {isMobileSearchOpen && (
+        <div className="lg:hidden border-t border-secondary-container/20 bg-background px-6 py-3 shadow-[0px_10px_20px_rgba(90,96,90,0.05)]">
+          <form onSubmit={handleSearchSubmit} className="relative">
+            <input
+              type="text"
+              placeholder="Search boutique..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+              className="w-full rounded-full border border-outline/15 bg-surface-container-low py-3 pl-10 pr-4 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" />
+          </form>
+        </div>
+      )}
+
       {/* Mobile Drawer Navigation */}
       {isMobileMenuOpen && (
         <div className="md:hidden absolute top-20 left-0 w-full bg-background border-b border-secondary-container-dim/50 shadow-lg py-6 px-6 z-40 animate-fade-in animate-duration-200">
           <div className="flex flex-col gap-4">
-            <Link 
-              href="/shop" 
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`text-base font-semibold py-2 border-b border-secondary-container/10 transition-all ${
-                isShopAllActive 
-                  ? "text-primary border-l-4 border-primary pl-3 bg-primary/5" 
-                  : "text-secondary hover:text-primary"
-              }`}
-            >
-              Shop All
-            </Link>
-            <Link 
-              href="/shop?category=dog" 
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`text-base font-semibold py-2 transition-all ${
-                isDogsActive 
-                  ? "text-primary border-l-4 border-primary pl-3 bg-primary/5" 
-                  : "text-secondary hover:text-primary"
-              }`}
-            >
-              Dogs
-            </Link>
-            <div className="border-b border-secondary-container/10 pb-2 pl-4">
-              {PET_MENU_ITEMS.dog.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block py-1.5 text-sm font-semibold text-secondary/85 transition-colors hover:text-primary"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-            <Link 
-              href="/shop?category=cat" 
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`text-base font-semibold py-2 transition-all ${
-                isCatsActive 
-                  ? "text-primary border-l-4 border-primary pl-3 bg-primary/5" 
-                  : "text-secondary hover:text-primary"
-              }`}
-            >
-              Cats
-            </Link>
-            <div className="border-b border-secondary-container/10 pb-2 pl-4">
-              {PET_MENU_ITEMS.cat.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block py-1.5 text-sm font-semibold text-secondary/85 transition-colors hover:text-primary"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-            <Link 
-              href="/shop?sort=Newest+Arrivals" 
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`text-base font-semibold py-2 border-b border-secondary-container/10 transition-all ${
-                isNewArrivalsActive 
-                  ? "text-primary border-l-4 border-primary pl-3 bg-primary/5" 
-                  : "text-secondary hover:text-primary"
-              }`}
-            >
-              New Arrivals
-            </Link>
+            {navItems.map((item) => {
+              const navKey = `${item.label}-${item.href}`;
+              const isActive = activeNavKey === navKey;
+
+              return (
+                <div key={`${item.label}-${item.href}`} className="border-b border-secondary-container/10 pb-2">
+                  {item.items.length > 0 ? (
+                    <div
+                      className={`block text-base font-semibold py-2 transition-all ${
+                        isActive
+                          ? "text-primary border-l-4 border-primary pl-3 bg-primary/5"
+                          : "text-secondary"
+                      }`}
+                    >
+                      {item.label}
+                    </div>
+                  ) : (
+                    <Link
+                      href={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`block text-base font-semibold py-2 transition-all ${
+                        isActive
+                          ? "text-primary border-l-4 border-primary pl-3 bg-primary/5"
+                          : "text-secondary hover:text-primary"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  )}
+                  {item.items.length > 0 && (
+                    <div className="pl-4">
+                      {item.items.map((child) => (
+                        <Link
+                          key={`${child.label}-${child.href}`}
+                          href={child.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="block py-1.5 text-sm font-semibold text-secondary/85 transition-colors hover:text-primary"
+                        >
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             <Link 
               href="/wishlist" 
               onClick={() => setIsMobileMenuOpen(false)}

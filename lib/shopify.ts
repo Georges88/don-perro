@@ -1,7 +1,7 @@
 import "server-only";
 
 import { mockProducts, mockCollections, mockBrands, mockTestimonials } from "@/data/mockData";
-import { Product, Collection, Brand, Testimonial, ShopifyImage, MoneyV2 } from "@/types/shopify";
+import { Product, Collection, Brand, Testimonial, ShopifyImage, MoneyV2, Menu } from "@/types/shopify";
 
 const CATALOG_QUERY = `#graphql
   query CatalogData {
@@ -18,6 +18,7 @@ const CATALOG_QUERY = `#graphql
         images(first: 10) { nodes { url altText width height } }
         priceRange { minVariantPrice { amount currencyCode } }
         compareAtPriceRange { minVariantPrice { amount currencyCode } }
+        collections(first: 20) { nodes { id title handle } }
         variants(first: 100) {
           nodes {
             id
@@ -56,6 +57,7 @@ const PRODUCTS_QUERY = `#graphql
         images(first: 10) { nodes { url altText width height } }
         priceRange { minVariantPrice { amount currencyCode } }
         compareAtPriceRange { minVariantPrice { amount currencyCode } }
+        collections(first: 20) { nodes { id title handle } }
         variants(first: 100) {
           nodes {
             id
@@ -89,6 +91,30 @@ const CART_CREATE_MUTATION = `#graphql
   }
 `;
 
+const MENU_QUERY = `#graphql
+  query Menu($handle: String!) {
+    menu(handle: $handle) {
+      title
+      handle
+      items {
+        id
+        title
+        url
+        items {
+          id
+          title
+          url
+          items {
+            id
+            title
+            url
+          }
+        }
+      }
+    }
+  }
+`;
+
 interface ShopifyCatalogProduct {
   id: string;
   title: string;
@@ -101,6 +127,7 @@ interface ShopifyCatalogProduct {
   images: { nodes: ShopifyImage[] };
   priceRange: { minVariantPrice: MoneyV2 };
   compareAtPriceRange: { minVariantPrice: MoneyV2 };
+  collections: { nodes: Array<{ id: string; title: string; handle: string }> };
   variants: {
     nodes: Array<{
       id: string;
@@ -143,6 +170,23 @@ interface CartCreateResponse {
     } | null;
     userErrors: Array<{ field?: string[] | null; message: string }>;
   };
+}
+
+interface ShopifyMenuItem {
+  id: string;
+  title: string;
+  url: string | null;
+  items: ShopifyMenuItem[];
+}
+
+interface ShopifyMenu {
+  title: string;
+  handle: string;
+  items: ShopifyMenuItem[];
+}
+
+interface MenuResponse {
+  menu: ShopifyMenu | null;
 }
 
 interface GraphQLResponse<T> {
@@ -329,6 +373,7 @@ function mapProduct(product: ShopifyCatalogProduct): Product {
     priceRange: product.priceRange,
     compareAtPriceRange: comparePrice > currentPrice ? product.compareAtPriceRange : undefined,
     variants: product.variants.nodes,
+    collections: product.collections.nodes,
   };
 }
 
@@ -339,6 +384,52 @@ function mapCollection(collection: ShopifyCatalogCollection): Collection {
     handle: collection.handle,
     description: collection.description,
     image: collection.image || undefined,
+  };
+}
+
+function normalizeMenuUrl(url: string | null): string {
+  if (!url) return "#";
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.pathname.startsWith("/collections/")) {
+      const collectionHandle = parsed.pathname.split("/collections/")[1]?.split("/")[0];
+      if (collectionHandle === "all") return "/shop";
+      if (collectionHandle) {
+        return `/shop?collection=${encodeURIComponent(collectionHandle)}`;
+      }
+    }
+
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    if (url.startsWith("/collections/")) {
+      const collectionHandle = url.split("/collections/")[1]?.split("/")[0];
+      if (collectionHandle === "all") return "/shop";
+      if (collectionHandle) {
+        return `/shop?collection=${encodeURIComponent(collectionHandle)}`;
+      }
+    }
+
+    return url;
+  }
+}
+
+function mapMenuItem(item: ShopifyMenuItem) {
+  return {
+    id: item.id,
+    label: item.title,
+    href: normalizeMenuUrl(item.url),
+    items: item.items.map(mapMenuItem),
+  };
+}
+
+function mapMenu(menu: ShopifyMenu | null): Menu | null {
+  if (!menu) return null;
+
+  return {
+    title: menu.title,
+    handle: menu.handle,
+    items: menu.items.map(mapMenuItem),
   };
 }
 
@@ -364,6 +455,14 @@ export async function getCollections(): Promise<Collection[]> {
     async () => (await getCatalog()).collections.nodes.map(mapCollection),
     mockCollections,
     "collections",
+  );
+}
+
+export async function getMenu(handle = "main-menu"): Promise<Menu | null> {
+  return withMockFallback(
+    async () => mapMenu((await shopifyFetch<MenuResponse>(MENU_QUERY, { handle })).menu),
+    null,
+    "menu",
   );
 }
 

@@ -35,6 +35,7 @@ export interface Product {
     minVariantPrice: MoneyV2;
   };
   variants: ProductVariant[];
+  collections?: Pick<Collection, "id" | "title" | "handle">[];
   rating?: {
     value: number;
     count: number;
@@ -62,6 +63,19 @@ export interface Brand {
   id: string;
   name: string;
   logoUrl: string;
+}
+
+export interface MenuItem {
+  id?: string;
+  label: string;
+  href: string;
+  items: MenuItem[];
+}
+
+export interface Menu {
+  title: string;
+  handle: string;
+  items: MenuItem[];
 }
 
 export interface HotelReservationInput {

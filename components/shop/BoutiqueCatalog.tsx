@@ -30,23 +30,88 @@ interface BoutiqueCatalogProps {
   initialCollections: Collection[];
 }
 
-const PRODUCT_TYPE_OPTIONS = [
-  "Organic Food",
-  "Treats",
-  "Interactive Toys",
-  "Accessories",
-  "Supplements",
-  "Beds & Comfort",
-];
+function productMatchesCollectionHandle(product: Product, collectionHandle: string) {
+  const handle = collectionHandle.toLowerCase();
+  const tags = product.tags.map(tag => tag.toLowerCase());
+  const collectionHandles = product.collections?.map(collection => collection.handle.toLowerCase()) || [];
+
+  if (collectionHandles.includes(handle) || tags.includes(handle)) return true;
+
+  const [petPrefix, ...rest] = handle.split("-");
+  const collectionTag = rest.join("-");
+
+  if ((petPrefix === "dog" || petPrefix === "cat") && collectionTag) {
+    return tags.includes(petPrefix) && (
+      tags.includes(collectionTag)
+      || tags.includes(`${petPrefix}-${collectionTag}`)
+      || product.productType.toLowerCase().replace(/\s+/g, "-") === collectionTag
+    );
+  }
+
+  return tags.includes(collectionTag) || product.productType.toLowerCase().replace(/\s+/g, "-") === handle;
+}
+
+function productMatchesPetCategory(product: Product, category: string) {
+  const normalizedCategory = category.toLowerCase();
+  const tags = product.tags.map(tag => tag.toLowerCase());
+  const collectionHandles = product.collections?.map(collection => collection.handle.toLowerCase()) || [];
+  const collectionCategories = new Set<string>(
+    collectionHandles
+      .map((handle) => {
+        if (handle === "dog" || handle.startsWith("dog-")) return "dog";
+        if (handle === "cat" || handle.startsWith("cat-")) return "cat";
+        return "";
+      })
+      .filter(Boolean),
+  );
+
+  if (collectionCategories.size > 0) {
+    return collectionCategories.has(normalizedCategory);
+  }
+
+  return tags.includes(normalizedCategory);
+}
+
+function cleanCollectionLabel(title: string) {
+  return title.replace(/^(dog|cat)\s+/i, "").trim();
+}
+
+function getProductTypeLabel(product: Product) {
+  const normalizedProductType = product.productType.trim().toLowerCase();
+
+  if (normalizedProductType && !["default", "essentials"].includes(normalizedProductType)) {
+    return product.productType;
+  }
+
+  const collection = product.collections?.find(item => !["dog", "cat"].includes(item.handle.toLowerCase()));
+  if (collection) return cleanCollectionLabel(collection.title);
+
+  return product.productType || "Essentials";
+}
+
+function productTypeBelongsToCategory(typeLabel: string, category: string) {
+  const normalizedType = typeLabel.trim().toLowerCase();
+
+  if (category === "dog") return !normalizedType.startsWith("cat ");
+  if (category === "cat") return !normalizedType.startsWith("dog ");
+
+  return true;
+}
 
 function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   const searchParams = useSearchParams();
+  const categoryOptions = [
+    { value: "dog", label: "Dogs" },
+    { value: "cat", label: "Cats" },
+  ].filter(option => initialProducts.some(product => productMatchesPetCategory(product, option.value)));
 
   // ----------------------------------------------------
   // Interactive Filter States
   // ----------------------------------------------------
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<number>(300);
   const [inStockOnly, setInStockOnly] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -68,6 +133,24 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [cartModalItem, setCartModalItem] = useState<{ product: Product; quantity: number; selectedVariantId: string } | null>(null);
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
+  const hasActiveFilters = selectedCategories.length > 0
+    || selectedTypes.length > 0
+    || selectedTags.length > 0
+    || selectedCollections.length > 0
+    || priceRange < 300
+    || Boolean(searchQuery);
+  const selectedCategory = selectedCategories[0] || "";
+  const productTypeOptions = selectedCategory
+    ? Array.from(
+        new Set(
+          initialProducts
+            .filter(product => productMatchesPetCategory(product, selectedCategory))
+            .map(getProductTypeLabel)
+            .filter(type => productTypeBelongsToCategory(type, selectedCategory))
+            .filter(Boolean),
+        ),
+      ).sort((a, b) => a.localeCompare(b))
+    : [];
 
   useEffect(() => {
     if (!cartModalItem) return;
@@ -98,10 +181,23 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   useEffect(() => {
     const categoryQuery = searchParams.get("category");
     const typeQuery = searchParams.get("type");
+    const tagQuery = searchParams.get("tag");
+    const collectionQuery = searchParams.get("collection");
     const searchQueryParam = searchParams.get("search");
+    const collectionHandles = collectionQuery
+      ? collectionQuery.split(",").map(collection => collection.trim()).filter(collection => collection && collection !== "all")
+      : [];
+    const firstCollection = collectionHandles[0]?.toLowerCase() || "";
+    const collectionCategory = firstCollection.startsWith("dog-")
+      ? "dog"
+      : firstCollection.startsWith("cat-")
+        ? "cat"
+        : "";
 
-    setSelectedCategories(categoryQuery ? [categoryQuery] : []);
+    setSelectedCategories(categoryQuery ? [categoryQuery] : collectionCategory ? [collectionCategory] : []);
     setSelectedTypes(typeQuery ? [typeQuery] : []);
+    setSelectedTags(tagQuery ? tagQuery.split(",").map(tag => tag.trim()).filter(Boolean) : []);
+    setSelectedCollections(collectionHandles);
     setSearchQuery(searchQueryParam || "");
     setCurrentPage(1);
   }, [searchParams]);
@@ -117,6 +213,9 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   };
 
   const getCategoryLabel = (product: Product) => {
+    const productTypeLabel = getProductTypeLabel(product);
+    if (productTypeLabel && productTypeLabel !== "Essentials") return productTypeLabel.toUpperCase();
+
     if (product.tags.includes("treats") || product.tags.includes("food")) return "FOOD";
     if (product.tags.includes("dining") || product.tags.includes("bowl")) return "DINING";
     if (product.tags.includes("accessories") || product.tags.includes("harness") || product.tags.includes("leather")) return "ACCESSORIES";
@@ -126,11 +225,11 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
     return "ESSENTIALS";
   };
 
-  // Toggle Category Checkboxes
+  // Select one pet category at a time.
   const toggleCategory = (category: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
-    );
+    setSelectedCategories([category]);
+    setSelectedTypes([]);
+    setSelectedCollections([]);
     setCurrentPage(1);
   };
 
@@ -146,6 +245,8 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   const clearAllFilters = () => {
     setSelectedCategories([]);
     setSelectedTypes([]);
+    setSelectedTags([]);
+    setSelectedCollections([]);
     setPriceRange(300);
     setInStockOnly(false);
     setSearchQuery("");
@@ -167,20 +268,35 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
 
     // 2. Category tag check ("dog", "cat")
     if (selectedCategories.length > 0) {
-      const matchCat = selectedCategories.some(cat => product.tags.includes(cat));
+      const matchCat = selectedCategories.some(cat => (
+        productMatchesPetCategory(product, cat)
+        && productTypeBelongsToCategory(getProductTypeLabel(product), cat)
+      ));
       if (!matchCat) return false;
     }
 
     // 3. Product Type check
     if (selectedTypes.length > 0) {
-      if (!selectedTypes.includes(product.productType)) return false;
+      if (!selectedTypes.includes(getProductTypeLabel(product))) return false;
     }
 
-    // 4. Price range check
+    // 4. Product tag check
+    if (selectedTags.length > 0) {
+      const matchTag = selectedTags.some(tag => product.tags.includes(tag));
+      if (!matchTag) return false;
+    }
+
+    // 5. Shopify collection handle check
+    if (selectedCollections.length > 0) {
+      const matchCollection = selectedCollections.some(collection => productMatchesCollectionHandle(product, collection));
+      if (!matchCollection) return false;
+    }
+
+    // 6. Price range check
     const price = parseFloat(product.priceRange.minVariantPrice.amount);
     if (price > priceRange) return false;
 
-    // 5. Availability/In stock check (Mock data items are all in stock initially)
+    // 7. Availability/In stock check (Mock data items are all in stock initially)
     if (inStockOnly) {
       const variantInStock = product.variants.some(v => v.availableForSale);
       if (!variantInStock) return false;
@@ -225,6 +341,15 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   );
 
   const scrollToShopTop = () => {
+    const shopTop = document.getElementById("shop-results-top");
+
+    if (shopTop) {
+      const headerOffset = 96;
+      const top = shopTop.getBoundingClientRect().top + window.scrollY - headerOffset;
+      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+      return;
+    }
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -416,28 +541,20 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                 Category
               </h3>
               <div className="space-y-3">
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <input 
-                    type="checkbox"
-                    checked={selectedCategories.includes("dog")}
-                    onChange={() => toggleCategory("dog")}
-                    className="rounded border-outline-variant/60 accent-primary h-4.5 w-4.5 cursor-pointer"
-                  />
-                  <span className="text-sm text-secondary group-hover:text-primary transition-colors font-sans">
-                    Dogs
-                  </span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <input 
-                    type="checkbox"
-                    checked={selectedCategories.includes("cat")}
-                    onChange={() => toggleCategory("cat")}
-                    className="rounded border-outline-variant/60 accent-primary h-4.5 w-4.5 cursor-pointer"
-                  />
-                  <span className="text-sm text-secondary group-hover:text-primary transition-colors font-sans">
-                    Cats
-                  </span>
-                </label>
+                {categoryOptions.map((category) => (
+                  <label key={category.value} className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="pet-category"
+                      checked={selectedCategories.includes(category.value)}
+                      onChange={() => toggleCategory(category.value)}
+                      className="border-outline-variant/60 accent-primary h-4.5 w-4.5 cursor-pointer"
+                    />
+                    <span className="text-sm text-secondary group-hover:text-primary transition-colors font-sans">
+                      {category.label}
+                    </span>
+                  </label>
+                ))}
               </div>
             </div>
 
@@ -447,19 +564,25 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                 Product Type
               </h3>
               <div className="space-y-3">
-                {PRODUCT_TYPE_OPTIONS.map((type) => (
-                  <label key={type} className="flex items-center gap-3 cursor-pointer group">
-                    <input 
-                      type="checkbox"
-                      checked={selectedTypes.includes(type)}
-                      onChange={() => toggleType(type)}
-                      className="rounded border-outline-variant/60 accent-primary h-4.5 w-4.5 cursor-pointer"
-                    />
-                    <span className="text-sm text-secondary group-hover:text-primary transition-colors font-sans">
-                      {type}
-                    </span>
-                  </label>
-                ))}
+                {selectedCategory ? (
+                  productTypeOptions.map((type) => (
+                    <label key={type} className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={selectedTypes.includes(type)}
+                        onChange={() => toggleType(type)}
+                        className="rounded border-outline-variant/60 accent-primary h-4.5 w-4.5 cursor-pointer"
+                      />
+                      <span className="text-sm text-secondary group-hover:text-primary transition-colors font-sans">
+                        {type}
+                      </span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-xs text-secondary/80 leading-relaxed">
+                    Select Dogs or Cats to see matching product types.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -517,7 +640,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
             </div>
 
             {/* Clear All Option */}
-            {(selectedCategories.length > 0 || selectedTypes.length > 0 || priceRange < 300 || searchQuery) && (
+            {hasActiveFilters && (
               <button 
                 onClick={clearAllFilters}
                 className="w-full text-center border-2 border-dashed border-outline/20 hover:border-primary/40 text-xs font-bold text-secondary hover:text-primary py-3 rounded-full transition-colors font-sans"
@@ -528,7 +651,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
           </aside>
 
           {/* Right Product Grid Column */}
-          <div className="flex-grow">
+          <div id="shop-results-top" className="flex-grow scroll-mt-28">
             {totalProducts === 0 ? (
               <div className="text-center py-20 bg-surface-container-low rounded-2xl border border-dashed border-outline/20">
                 <Info className="w-10 h-10 text-secondary/50 mx-auto mb-3" />
@@ -567,6 +690,16 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                     {selectedTypes.map(typ => (
                       <span key={typ} className="bg-tertiary-container text-on-tertiary-container px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
                         {typ}
+                      </span>
+                    ))}
+                    {selectedTags.map(tag => (
+                      <span key={tag} className="bg-primary/10 text-primary px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+                        {tag}
+                      </span>
+                    ))}
+                    {selectedCollections.map(collection => (
+                      <span key={collection} className="bg-primary/10 text-primary px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+                        {collection.replace(/-/g, " ")}
                       </span>
                     ))}
                   </div>
@@ -649,7 +782,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                             <img 
                               src={product.featuredImage.url} 
                               alt={product.featuredImage.altText || product.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
+                              className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500 ease-in-out"
                               loading="lazy"
                               onError={(e) => {
                                 // Safe fallback for remote pictures
@@ -829,24 +962,18 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                   Category
                 </h3>
                 <div className="space-y-3">
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <input 
-                      type="checkbox"
-                      checked={selectedCategories.includes("dog")}
-                      onChange={() => toggleCategory("dog")}
-                      className="rounded border-outline-variant/60 accent-primary h-5 w-5 cursor-pointer"
-                    />
-                    <span className="text-sm text-secondary">Dogs</span>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <input 
-                      type="checkbox"
-                      checked={selectedCategories.includes("cat")}
-                      onChange={() => toggleCategory("cat")}
-                      className="rounded border-outline-variant/60 accent-primary h-5 w-5 cursor-pointer"
-                    />
-                    <span className="text-sm text-secondary">Cats</span>
-                  </label>
+                  {categoryOptions.map((category) => (
+                    <label key={category.value} className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="radio"
+                        name="mobile-pet-category"
+                        checked={selectedCategories.includes(category.value)}
+                        onChange={() => toggleCategory(category.value)}
+                        className="border-outline-variant/60 accent-primary h-5 w-5 cursor-pointer"
+                      />
+                      <span className="text-sm text-secondary">{category.label}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
@@ -856,17 +983,23 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                   Product Type
                 </h3>
                 <div className="space-y-3">
-                    {PRODUCT_TYPE_OPTIONS.map((type) => (
-                    <label key={type} className="flex items-center gap-3 cursor-pointer group">
-                      <input 
-                        type="checkbox"
-                        checked={selectedTypes.includes(type)}
-                        onChange={() => toggleType(type)}
-                        className="rounded border-outline-variant/60 accent-primary h-5 w-5 cursor-pointer"
-                      />
-                      <span className="text-sm text-secondary">{type}</span>
-                    </label>
-                  ))}
+                  {selectedCategory ? (
+                    productTypeOptions.map((type) => (
+                      <label key={type} className="flex items-center gap-3 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={selectedTypes.includes(type)}
+                          onChange={() => toggleType(type)}
+                          className="rounded border-outline-variant/60 accent-primary h-5 w-5 cursor-pointer"
+                        />
+                        <span className="text-sm text-secondary">{type}</span>
+                      </label>
+                    ))
+                  ) : (
+                    <p className="text-xs text-secondary/80 leading-relaxed">
+                      Select Dogs or Cats to see matching product types.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -957,7 +1090,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
               <img 
                 src={quickViewProduct.featuredImage.url} 
                 alt={quickViewProduct.featuredImage.altText || quickViewProduct.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain p-4"
               />
               <button 
                 onClick={() => setQuickViewProduct(null)}
@@ -1042,7 +1175,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
             <img 
               src={cartModalItem.product.featuredImage.url} 
               alt={cartModalItem.product.title} 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain p-2"
             />
           </div>
           <div className="flex-grow space-y-1 select-none">

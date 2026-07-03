@@ -424,7 +424,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
                         <img 
                           src={product.featuredImage.url} 
                           alt={product.featuredImage.altText || product.title}
-                          className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
+                          className="w-full h-full object-contain p-4 transition-transform duration-500 ease-in-out group-hover:scale-105"
                           onError={(e) => {
                             e.currentTarget.src = "https://picsum.photos/seed/kibbles/400/400";
                           }}
@@ -594,7 +594,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
                 <img 
                   src={quickViewProduct.featuredImage.url} 
                   alt={quickViewProduct.featuredImage.altText || quickViewProduct.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain p-4"
                   onError={(e) => {
                     e.currentTarget.src = "https://picsum.photos/seed/kibbles/400/400";
                   }}
