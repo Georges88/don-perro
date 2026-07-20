@@ -265,10 +265,14 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-md border-b border-secondary-container/20 shadow-[0px_10px_30px_rgba(90,96,90,0.05)] transition-all duration-300">
-      <nav className="flex justify-between items-center w-full px-6 md:px-16 max-w-7xl mx-auto h-20">
+      <nav className="flex justify-between items-center w-full px-6 md:px-16 max-w-7xl mx-auto h-24">
         {/* Brand Logo */}
-        <Link href="/" className="text-2xl font-bold font-heading text-primary hover:opacity-90 transition-opacity">
-          Don Perro
+        <Link href="/" className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl hover:opacity-90 transition-opacity" aria-label="Don Perro home">
+          <img
+            src="/images/don-perro-navbar-logo.png"
+            alt="Don Perro Food & More"
+            className="block h-full w-full object-contain"
+          />
         </Link>
 
         {/* Navigation Links (Desktop) */}

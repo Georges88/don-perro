@@ -901,32 +901,52 @@ export const mockBrands: Brand[] = [
   {
     id: "b_1",
     name: "Royal Canin",
-    logoUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDysXnqFs1oBjE96nM_6h7mfLwR330vBz7x0JHbPk9dU51SbpTjYQo7Y3vipxbGFbbgQoHnCXD27fys47Au110iO8GBzZ8CblrcB3mcc_JyX6fTt4DOVhsmhGY4Tuf-sSjxHurw0RZ5gE_DOrT6vNPZQfoevY5lVd5zT0LMWR6wDexeJhELB3cfW7QSpqkaVooNUcLa1SiLuZHOEboIhtdI1rCzciD2DtYvRmARtdnBSVvjQKN0KiIm-2VoLnNVqh7Ws88ieZzEAu5n"
+    logoUrl: "/images/brands/royal-canin.png"
   },
   {
     id: "b_2",
-    name: "Purina Pro Plan",
-    logoUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBAkRY-OZmJc-_jG3idepgZY-13b4Hhkm4B4HxyXrSyDxbQI1XaatF9DoN4vvg3o-R81JFAM0WS9_DVIhkaj8nXjyMjS6bR7bwX9F2UYOurG6xgqCDpyzMo-hrvYOyFyaW-XcKyZgGVhyS73W60FN5HNE_zY9qdd2fqQIYin2szT7--_J-jqifDTDS-S-wVkYyxz0dHkX2OL92JPIxff9ttVh-pB4azX-IFHR3xfsEYftmgMIBU_p2aTFJlP-cT2pjsEwbn3l3DNrB2"
+    name: "Taste of the Wild",
+    logoUrl: "/images/brands/taste-of-the-wild.png"
   },
   {
     id: "b_3",
-    name: "Hill's Science Diet",
-    logoUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuC9mKafiQXyyw8jTXndokRpDkgjFNGi_SpcyxesLSsgfzUoX_GD2j7tAxQDfUchWRuZlzmGf-qRdBNHFQUr1rHWTBP1i2EoSKbev2HiZ0J25Vc-gbfue0Mfl4-S95ChEEwFLTk3xc_QA2TugrlFy3WyZgfPn8gzy5daeFcFhYLEpqfn491o_LLAayYyMt0i-Llom-CK1UWrndZ3NpBDWZbvKyyTocAXnL13TCPFU_tDchbuOFKG3q9slubewK7F6UJnXvsgc3uxLL2i"
+    name: "Diamond Naturals",
+    logoUrl: "/images/brands/diamond-naturals.png"
   },
   {
     id: "b_4",
-    name: "Acana",
-    logoUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuB6FmNGelrizFCx87IXK0W3N1outCS7zJZm79z7jCa8oxVZ-TfaidUgWb0rfXjOiiliJ-u6Xw1jcXelmW_0Q_RnEBm_ViuC3zB6rM_mSaFzQj-ZNykgfmhfluEm5Plbdk4a038VNIYHdOtx3NiraPq3akT9B2K19hVG_rTXPbfCka6K4hAh-Y1qQz9-JC3cRSeNc9C1D3BKeQe1X9ahdgwdDKEaR0kwP5fECPTobG32buXdKlQlSyyAa7yctaqvbNtuA35Hfvo_Q3v5"
+    name: "Amity",
+    logoUrl: "/images/brands/amity.png"
   },
   {
     id: "b_5",
-    name: "Orijen",
-    logoUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuAhT9ETfzieMDd8YlW6ocKELaEp7XoUh9Tsmseaq4Ecq2tAGRIKUoL88xJKdqhvx2h-jre2MUX-tKreykHuK3xttZq-j0GZ-yHZzIqEzGh9wJc6erMAR_x2p-u-iXSTeWh_gREp25B923Q4MhNn45BlMJL9pfeZIIiGZ2EOSSgcxFgfc7NSaoBdHPF7ndwBonuWKfvacp2tADInGq-LuHG4uZQUWEyYn21tC3_2nErTlMm-om34fUYGqDkd_G8CufjYh3A_6aw8KiQt"
+    name: "Pro Plan",
+    logoUrl: "/images/brands/pro-plan.png"
   },
   {
     id: "b_6",
-    name: "Taste of the Wild",
-    logoUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHUAO_wNl3RMIqcLBWCBoxGNPza3gouPzA7lZ_xA8-Dl0J71yflQDeB_z9DPdQ6rtUT6Lb_M9LKV28iJkXHd1hpZeHC7PrkZn0wp5lz0xRePIM6IWkLhdOZBqfPqaBPRdhjmjx-1eYv8pmSlua61wRli9wWKwHcV6TFFrLiWHDa68PzO7q0q_UrRFZabRaTr8eE4W6AON5BFMyQs2y1XnC1U_TQ12mo1BW_HAepIAmV2cYooE6_2NSe9shilpXch-sMVLBCqx70ZGY"
+    name: "Meglium",
+    logoUrl: "/images/brands/meglium.png"
+  },
+  {
+    id: "b_7",
+    name: "Dr. Clauder's",
+    logoUrl: "/images/brands/dr-clauders.png"
+  },
+  {
+    id: "b_8",
+    name: "Nobby",
+    logoUrl: "/images/brands/nobby.png"
+  },
+  {
+    id: "b_9",
+    name: "Trixie",
+    logoUrl: "/images/brands/trixie.png"
+  },
+  {
+    id: "b_10",
+    name: "Doco",
+    logoUrl: "/images/brands/doco.png"
   }
 ];
 

@@ -36,15 +36,15 @@ export default async function TrustedBrands() {
         {/* Endless Scrolling Marquee Belt */}
         <div className="flex overflow-hidden relative w-full">
           {/* Track Belt */}
-          <div className="flex animate-marquee whitespace-nowrap py-4 gap-6">
+          <div className="flex animate-marquee whitespace-nowrap py-4 gap-[100px]">
             {marqueeList.map((brand, index) => (
               <div 
                 key={`${brand.id}-${index}`}
-                className="w-40 sm:w-48 md:w-56 h-28 flex-shrink-0 bg-white rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.01)] border border-surface-variant/30 flex items-center justify-center p-6 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 transform"
+                className="w-[100px] h-[100px] flex-shrink-0 flex items-center justify-center hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 transform"
               >
                 <img 
                   alt={`${brand.name} logo`} 
-                  className="max-w-full max-h-full object-contain filter grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100" 
+                  className="w-full h-full object-contain scale-125 transition-transform duration-300 hover:scale-[1.32]" 
                   src={brand.logoUrl}
                   loading="lazy"
                 />
