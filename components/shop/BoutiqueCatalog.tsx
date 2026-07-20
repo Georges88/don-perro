@@ -782,7 +782,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                             <img 
                               src={product.featuredImage.url} 
                               alt={product.featuredImage.altText || product.title}
-                              className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500 ease-in-out"
+                              className="block w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
                               loading="lazy"
                               onError={(e) => {
                                 // Safe fallback for remote pictures
@@ -1090,7 +1090,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
               <img 
                 src={quickViewProduct.featuredImage.url} 
                 alt={quickViewProduct.featuredImage.altText || quickViewProduct.title}
-                className="w-full h-full object-contain p-4"
+                className="block w-full h-full object-cover"
               />
               <button 
                 onClick={() => setQuickViewProduct(null)}
@@ -1175,7 +1175,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
             <img 
               src={cartModalItem.product.featuredImage.url} 
               alt={cartModalItem.product.title} 
-              className="w-full h-full object-contain p-2"
+              className="block w-full h-full object-cover"
             />
           </div>
           <div className="flex-grow space-y-1 select-none">

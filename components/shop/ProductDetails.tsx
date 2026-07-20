@@ -27,6 +27,8 @@ interface ProductDetailsProps {
 export default function ProductDetails({ product, allProducts }: ProductDetailsProps) {
   const productVariants = product.variants || [];
   const showVariantSelector = hasVisibleVariants(product);
+  const variantOptionName = product.options?.[0]?.name || "Option";
+  const hasDescription = Boolean(product.description.trim());
 
   // Image gallery state
   const galleryImages = product.images && product.images.length > 0 
@@ -270,11 +272,11 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
               </div>
             </div>
 
-            {/* Custom Variants Selector (Size) */}
+            {/* Custom Variants Selector */}
             {showVariantSelector && (
               <div className="space-y-3">
                 <span className="text-xs font-bold text-[#191c1c] uppercase tracking-wider block">
-                  Select Size
+                  {variantOptionName}
                 </span>
                 <div className="flex flex-wrap gap-2.5 select-none">
                   {productVariants.map((v) => {
@@ -361,17 +363,25 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
           </div>
         </div>
 
-        {/* Description */}
-        <div className="mb-10 animate-fade-in text-on-surface font-sans">
-          <div className="max-w-3xl space-y-3">
-            <h3 className="text-lg font-heading font-extrabold text-[#191c1c]">
-              Product Description
-            </h3>
-            <p className="text-secondary/95 text-sm md:text-base leading-relaxed">
-              {product.description}
-            </p>
+        {hasDescription && (
+          <div className="mb-10 animate-fade-in text-on-surface font-sans">
+            <div className="w-full space-y-3">
+              <h3 className="text-lg font-heading font-extrabold text-[#191c1c]">
+                Product Description
+              </h3>
+              {product.descriptionHtml ? (
+                <div
+                  className="font-sans text-black text-sm md:text-base leading-relaxed [&_p]:mb-4 [&_p:last-child]:mb-0 [&_strong]:font-bold [&_b]:font-bold [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
+                  dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
+                />
+              ) : (
+                <p className="font-sans whitespace-pre-line text-black text-sm md:text-base leading-relaxed">
+                  {product.description}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* RELATED PRODUCTS SECTION ("You May Also Like") */}
         <section className="border-t border-surface-variant/30 pt-10">

@@ -23,9 +23,11 @@ export interface Product {
   title: string;
   handle: string;
   description: string;
+  descriptionHtml?: string;
   vendor: string; // The Brand
   productType: string; // Category, e.g. "Nutrition", "Accessories"
   tags: string[];
+  options?: Array<{ name: string }>;
   featuredImage: ShopifyImage;
   images: ShopifyImage[];
   priceRange: {

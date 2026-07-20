@@ -11,9 +11,11 @@ const CATALOG_QUERY = `#graphql
         title
         handle
         description
+        descriptionHtml
         vendor
         productType
         tags
+        options { name }
         featuredImage { url altText width height }
         images(first: 10) { nodes { url altText width height } }
         priceRange { minVariantPrice { amount currencyCode } }
@@ -50,9 +52,11 @@ const PRODUCTS_QUERY = `#graphql
         title
         handle
         description
+        descriptionHtml
         vendor
         productType
         tags
+        options { name }
         featuredImage { url altText width height }
         images(first: 10) { nodes { url altText width height } }
         priceRange { minVariantPrice { amount currencyCode } }
@@ -120,9 +124,11 @@ interface ShopifyCatalogProduct {
   title: string;
   handle: string;
   description: string;
+  descriptionHtml: string;
   vendor: string;
   productType: string;
   tags: string[];
+  options: Array<{ name: string }>;
   featuredImage: ShopifyImage | null;
   images: { nodes: ShopifyImage[] };
   priceRange: { minVariantPrice: MoneyV2 };
@@ -365,9 +371,11 @@ function mapProduct(product: ShopifyCatalogProduct): Product {
     title: product.title,
     handle: product.handle,
     description: product.description,
+    descriptionHtml: product.descriptionHtml,
     vendor: product.vendor,
     productType: product.productType,
     tags: product.tags.map((tag) => tag.toLowerCase()),
+    options: product.options,
     featuredImage,
     images: images.length ? images : [featuredImage],
     priceRange: product.priceRange,

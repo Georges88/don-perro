@@ -44,7 +44,7 @@ export default async function BestSellers() {
                 <div className="aspect-square bg-white rounded-2xl overflow-hidden shadow-[0px_5px_15px_rgba(90,96,90,0.03)] group-hover:shadow-[0px_15px_35px_rgba(90,96,90,0.08)] transition-all duration-300 relative">
                   <Link href={`/products/${product.handle}`} className="block w-full h-full cursor-pointer">
                     <img 
-                      className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500" 
+                      className="block w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                       src={product.featuredImage.url} 
                       alt={product.featuredImage.altText || product.title}
                       loading="lazy"
