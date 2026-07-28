@@ -27,8 +27,22 @@ interface ProductDetailsProps {
 export default function ProductDetails({ product, allProducts }: ProductDetailsProps) {
   const productVariants = product.variants || [];
   const showVariantSelector = hasVisibleVariants(product);
-  const variantOptionName = product.options?.[0]?.name || "Option";
   const hasDescription = Boolean(product.description.trim());
+
+  const getVariantOptions = (variant: Product["variants"][number]) => {
+    if (variant.selectedOptions?.length) return variant.selectedOptions;
+
+    const values = variant.title.split(" / ");
+    return values.map((value, index) => ({
+      name: product.options?.[index]?.name || `Option ${index + 1}`,
+      value,
+    }));
+  };
+
+  const defaultVariant = getDefaultVariant(product);
+  const defaultSelections = defaultVariant
+    ? Object.fromEntries(getVariantOptions(defaultVariant).map(({ name, value }) => [name, value]))
+    : {};
 
   // Image gallery state
   const galleryImages = product.images && product.images.length > 0 
@@ -37,7 +51,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
   const [activeImg, setActiveImg] = useState<string>(galleryImages[0].url);
 
   // Variant selections
-  const [selectedSize, setSelectedSize] = useState<string>(getDefaultVariant(product)?.title || "Standard");
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(defaultSelections);
   const [quantity, setQuantity] = useState<number>(1);
 
   // Cart action feedback state
@@ -75,7 +89,10 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
       setActiveImg(galleryImages[0].url);
     }
     setQuantity(1);
-    setSelectedSize(getDefaultVariant(product)?.title || "Standard");
+    const nextDefaultVariant = getDefaultVariant(product);
+    setSelectedOptions(nextDefaultVariant
+      ? Object.fromEntries(getVariantOptions(nextDefaultVariant).map(({ name, value }) => [name, value]))
+      : {});
     syncWishlist();
   }, [product]);
 
@@ -89,10 +106,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
 
   // Add to Cart Simulation
   const handleAddToCart = () => {
-    // Find matching variant based on selected size
-    const selectedVariant = showVariantSelector
-      ? productVariants.find(v => v.title === selectedSize) || getSelectedVariant(product)
-      : getSelectedVariant(product);
+    const selectedVariant = resolvedVariant;
     const selectedVariantId = selectedVariant?.id || `var_${product.id}_1`;
     const selectedVariantTitle = selectedVariant?.title || "Default Title";
 
@@ -145,14 +159,23 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
 
   // Safe Parsing numeric elements
   const selectedVariant = showVariantSelector
-    ? productVariants.find(v => v.title === selectedSize) || getSelectedVariant(product)
+    ? productVariants.find((variant) =>
+        getVariantOptions(variant).every(({ name, value }) => selectedOptions[name] === value)
+      ) || getSelectedVariant(product)
     : getSelectedVariant(product);
+  const resolvedVariant = selectedVariant;
   const selectedVariantId = selectedVariant?.id;
   const selectedPrice = getSelectedVariantPrice(product, selectedVariantId);
   const selectedCompareAtPrice = getSelectedVariantCompareAtPrice(product, selectedVariantId);
   const comparePrice = selectedCompareAtPrice && Number(selectedCompareAtPrice.amount) > Number(selectedPrice.amount)
     ? formatMoney(selectedCompareAtPrice, quantity)
     : null;
+
+  useEffect(() => {
+    if (selectedVariant?.image?.url) {
+      setActiveImg(selectedVariant.image.url);
+    }
+  }, [selectedVariant?.id, selectedVariant?.image?.url]);
 
   // Filter Related Products (excl. current product)
   const relatedProducts = allProducts
@@ -272,30 +295,41 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
               </div>
             </div>
 
-            {/* Custom Variants Selector */}
+            {/* Product option selectors */}
             {showVariantSelector && (
-              <div className="space-y-3">
-                <span className="text-xs font-bold text-[#191c1c] uppercase tracking-wider block">
-                  {variantOptionName}
-                </span>
-                <div className="flex flex-wrap gap-2.5 select-none">
-                  {productVariants.map((v) => {
-                    const isActive = selectedSize === v.title;
-                    return (
-                      <button
-                        key={v.id}
-                        onClick={() => setSelectedSize(v.title)}
-                        className={`px-5 py-2.5 rounded-xl border-2 text-xs font-bold transition-all cursor-pointer ${
-                          isActive
-                            ? "border-primary bg-primary/5 text-primary shadow-sm"
-                            : "border-outline-variant/40 hover:border-secondary/60 text-secondary"
-                        }`}
-                      >
-                        {v.title}
-                      </button>
-                    );
-                  })}
-                </div>
+              <div className="space-y-5">
+                {(product.options || []).map((option, optionIndex) => {
+                  const values = option.values?.length
+                    ? option.values
+                    : Array.from(new Set(productVariants.map((variant) => getVariantOptions(variant)[optionIndex]?.value).filter(Boolean)));
+
+                  return (
+                    <div key={option.name} className="space-y-3">
+                      <span className="text-xs font-bold text-[#191c1c] uppercase tracking-wider block">
+                        {option.name}
+                      </span>
+                      <div className="flex flex-wrap gap-2.5 select-none">
+                        {values.map((value) => {
+                          const isActive = selectedOptions[option.name] === value;
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setSelectedOptions((current) => ({ ...current, [option.name]: value }))}
+                              className={`px-5 py-2.5 rounded-xl border-2 text-xs font-bold transition-all cursor-pointer ${
+                                isActive
+                                  ? "border-primary bg-primary/5 text-primary shadow-sm"
+                                  : "border-outline-variant/40 hover:border-secondary/60 text-secondary"
+                              }`}
+                            >
+                              {value}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 

@@ -6,6 +6,70 @@ export interface CartProductLine {
   selectedVariantTitle: string;
 }
 
+function getVariantOptions(product: Product, variant: ProductVariant) {
+  if (variant.selectedOptions?.length) return variant.selectedOptions;
+
+  return variant.title.split(" / ").map((value, index) => ({
+    name: product.options?.[index]?.name || `Option ${index + 1}`,
+    value,
+  }));
+}
+
+function getAdditiveOptionPriceLevels(product: Product): number[] | undefined {
+  const options = product.options || [];
+  if (options.length < 2 || !product.variants.length) return undefined;
+
+  const valueCount = options[0]?.values?.length || 0;
+  if (
+    valueCount < 2 ||
+    options.some((option) => option.values?.length !== valueCount)
+  ) {
+    return undefined;
+  }
+
+  const lastOption = options[options.length - 1];
+  const pricesByLastValue = new Map<string, number>();
+
+  for (const variant of product.variants) {
+    const selectedValue = getVariantOptions(product, variant)
+      .find(({ name }) => name === lastOption.name)?.value;
+    const amount = Number(variant.price.amount);
+    if (!selectedValue || !Number.isFinite(amount)) return undefined;
+
+    const currentAmount = pricesByLastValue.get(selectedValue);
+    if (currentAmount !== undefined && currentAmount !== amount) return undefined;
+    pricesByLastValue.set(selectedValue, amount);
+  }
+
+  const levels = lastOption.values?.map((value) => pricesByLastValue.get(value));
+  if (
+    !levels ||
+    levels.some((amount) => amount === undefined) ||
+    new Set(levels).size !== valueCount
+  ) {
+    return undefined;
+  }
+
+  return levels as number[];
+}
+
+function getAdditiveVariantPrice(product: Product, variant?: ProductVariant): MoneyV2 | undefined {
+  const levels = getAdditiveOptionPriceLevels(product);
+  if (!levels || !variant) return undefined;
+
+  const selections = getVariantOptions(product, variant);
+  const amount = (product.options || []).reduce((total, option) => {
+    const selectedValue = selections.find(({ name }) => name === option.name)?.value;
+    const valueIndex = option.values?.indexOf(selectedValue || "") ?? -1;
+    return valueIndex >= 0 ? total + levels[valueIndex] : total;
+  }, 0);
+
+  return {
+    amount: amount.toString(),
+    currencyCode: variant.price.currencyCode,
+  };
+}
+
 export function getDefaultVariant(product: Product): ProductVariant | undefined {
   return product.variants.find((variant) => variant.availableForSale) || product.variants[0];
 }
@@ -19,7 +83,10 @@ export function getSelectedVariant(product: Product, variantId?: string): Produc
 }
 
 export function getSelectedVariantPrice(product: Product, variantId?: string): MoneyV2 {
-  return getSelectedVariant(product, variantId)?.price || product.priceRange.minVariantPrice;
+  const variant = getSelectedVariant(product, variantId);
+  return getAdditiveVariantPrice(product, variant)
+    || variant?.price
+    || product.priceRange.minVariantPrice;
 }
 
 export function getSelectedVariantCompareAtPrice(product: Product, variantId?: string): MoneyV2 | undefined {
@@ -31,7 +98,9 @@ export function getSelectedVariantAmount(product: Product, variantId?: string): 
 }
 
 export function hasVariantPriceRange(product: Product): boolean {
-  const prices = product.variants.map((variant) => Number(variant.price.amount));
+  const prices = product.variants.map((variant) =>
+    Number(getAdditiveVariantPrice(product, variant)?.amount || variant.price.amount)
+  );
   return prices.length > 1 && Math.min(...prices) !== Math.max(...prices);
 }
 

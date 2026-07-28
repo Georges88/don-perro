@@ -15,7 +15,7 @@ const CATALOG_QUERY = `#graphql
         vendor
         productType
         tags
-        options { name }
+        options { name optionValues { name } }
         featuredImage { url altText width height }
         images(first: 10) { nodes { url altText width height } }
         priceRange { minVariantPrice { amount currencyCode } }
@@ -28,6 +28,8 @@ const CATALOG_QUERY = `#graphql
             availableForSale
             price { amount currencyCode }
             compareAtPrice { amount currencyCode }
+            image { url altText width height }
+            selectedOptions { name value }
           }
         }
       }
@@ -56,7 +58,7 @@ const PRODUCTS_QUERY = `#graphql
         vendor
         productType
         tags
-        options { name }
+        options { name optionValues { name } }
         featuredImage { url altText width height }
         images(first: 10) { nodes { url altText width height } }
         priceRange { minVariantPrice { amount currencyCode } }
@@ -69,6 +71,8 @@ const PRODUCTS_QUERY = `#graphql
             availableForSale
             price { amount currencyCode }
             compareAtPrice { amount currencyCode }
+            image { url altText width height }
+            selectedOptions { name value }
           }
         }
       }
@@ -128,7 +132,7 @@ interface ShopifyCatalogProduct {
   vendor: string;
   productType: string;
   tags: string[];
-  options: Array<{ name: string }>;
+  options: Array<{ name: string; optionValues: Array<{ name: string }> }>;
   featuredImage: ShopifyImage | null;
   images: { nodes: ShopifyImage[] };
   priceRange: { minVariantPrice: MoneyV2 };
@@ -141,6 +145,8 @@ interface ShopifyCatalogProduct {
       availableForSale: boolean;
       price: MoneyV2;
       compareAtPrice: MoneyV2 | null;
+      image: ShopifyImage | null;
+      selectedOptions: Array<{ name: string; value: string }>;
     }>;
   };
 }
@@ -375,7 +381,10 @@ function mapProduct(product: ShopifyCatalogProduct): Product {
     vendor: product.vendor,
     productType: product.productType,
     tags: product.tags.map((tag) => tag.toLowerCase()),
-    options: product.options,
+    options: product.options.map((option) => ({
+      name: option.name,
+      values: option.optionValues.map((value) => value.name),
+    })),
     featuredImage,
     images: images.length ? images : [featuredImage],
     priceRange: product.priceRange,

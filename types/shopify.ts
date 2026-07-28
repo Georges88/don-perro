@@ -16,6 +16,8 @@ export interface ProductVariant {
   availableForSale: boolean;
   price: MoneyV2;
   compareAtPrice?: MoneyV2;
+  image?: ShopifyImage | null;
+  selectedOptions?: Array<{ name: string; value: string }>;
 }
 
 export interface Product {
@@ -27,7 +29,7 @@ export interface Product {
   vendor: string; // The Brand
   productType: string; // Category, e.g. "Nutrition", "Accessories"
   tags: string[];
-  options?: Array<{ name: string }>;
+  options?: Array<{ name: string; values?: string[] }>;
   featuredImage: ShopifyImage;
   images: ShopifyImage[];
   priceRange: {
