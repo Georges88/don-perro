@@ -70,6 +70,10 @@ function getAdditiveVariantPrice(product: Product, variant?: ProductVariant): Mo
   };
 }
 
+function getVariantPrice(product: Product, variant: ProductVariant): MoneyV2 {
+  return getAdditiveVariantPrice(product, variant) || variant.price;
+}
+
 export function getDefaultVariant(product: Product): ProductVariant | undefined {
   return product.variants.find((variant) => variant.availableForSale) || product.variants[0];
 }
@@ -84,8 +88,7 @@ export function getSelectedVariant(product: Product, variantId?: string): Produc
 
 export function getSelectedVariantPrice(product: Product, variantId?: string): MoneyV2 {
   const variant = getSelectedVariant(product, variantId);
-  return getAdditiveVariantPrice(product, variant)
-    || variant?.price
+  return (variant ? getVariantPrice(product, variant) : undefined)
     || product.priceRange.minVariantPrice;
 }
 
@@ -97,9 +100,19 @@ export function getSelectedVariantAmount(product: Product, variantId?: string): 
   return Number(getSelectedVariantPrice(product, variantId).amount) || 0;
 }
 
+export function getMinimumVariantPrice(product: Product): MoneyV2 {
+  if (!product.variants.length) return product.priceRange.minVariantPrice;
+
+  return product.variants
+    .map((variant) => getVariantPrice(product, variant))
+    .reduce((lowest, price) =>
+      Number(price.amount) < Number(lowest.amount) ? price : lowest
+    );
+}
+
 export function hasVariantPriceRange(product: Product): boolean {
   const prices = product.variants.map((variant) =>
-    Number(getAdditiveVariantPrice(product, variant)?.amount || variant.price.amount)
+    Number(getVariantPrice(product, variant).amount)
   );
   return prices.length > 1 && Math.min(...prices) !== Math.max(...prices);
 }

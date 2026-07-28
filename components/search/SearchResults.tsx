@@ -41,7 +41,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
   const [activeQuery, setActiveQuery] = useState(queryParam);
   
   // Price Range
-  const [priceLimit, setPriceLimit] = useState<number>(150);
+  const [priceLimit, setPriceLimit] = useState<number>(300);
 
   // Availability
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
@@ -87,7 +87,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
 
   // Clear all filters
   const clearAllFilters = () => {
-    setPriceLimit(150);
+    setPriceLimit(300);
     setInStockOnly(false);
     setCurrentPage(1);
   };
@@ -101,7 +101,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
 
     // 3. Price Filter
     const price = parseFloat(product.priceRange.minVariantPrice.amount);
-    if (price > priceLimit) return false;
+    if (priceLimit < 300 && price > priceLimit) return false;
 
     // 4. Availability Filter
     if (inStockOnly) {
@@ -324,7 +324,7 @@ export default function SearchResults({ products }: SearchResultsProps) {
               <X className="w-3 h-3 text-[#5a605a] ml-0.5" />
             </button>
           )}
-          {(inStockOnly || priceLimit < 150) && (
+          {(inStockOnly || priceLimit < 300) && (
             <button 
               onClick={clearAllFilters}
               className="text-primary font-bold hover:underline transition-all ml-1 text-xs cursor-pointer"
@@ -349,7 +349,8 @@ export default function SearchResults({ products }: SearchResultsProps) {
               <input 
                 type="range"
                 min="10"
-                max="150"
+                max="300"
+                step="5"
                 value={priceLimit}
                 onChange={(e) => {
                   setPriceLimit(Number(e.target.value));
@@ -359,8 +360,10 @@ export default function SearchResults({ products }: SearchResultsProps) {
               />
               <div className="flex justify-between text-xs font-mono font-semibold text-secondary">
                 <span>$10</span>
-                <span className="text-primary bg-primary-container/20 px-2 py-0.5 rounded-full font-bold">Up to ${priceLimit}</span>
-                <span>$150</span>
+                <span className="text-primary bg-primary-container/20 px-2 py-0.5 rounded-full font-bold">
+                  {priceLimit === 300 ? "$300+" : `Up to $${priceLimit}`}
+                </span>
+                <span>$300+</span>
               </div>
             </div>
           </div>

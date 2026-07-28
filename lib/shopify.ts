@@ -1,6 +1,7 @@
 import "server-only";
 
 import { mockProducts, mockCollections, mockBrands, mockTestimonials } from "@/data/mockData";
+import { getMinimumVariantPrice } from "@/lib/pricing";
 import { Product, Collection, Brand, Testimonial, ShopifyImage, MoneyV2, Menu } from "@/types/shopify";
 
 const CATALOG_QUERY = `#graphql
@@ -372,7 +373,7 @@ function mapProduct(product: ShopifyCatalogProduct): Product {
   const currentPrice = Number(product.priceRange.minVariantPrice.amount);
   const comparePrice = Number(product.compareAtPriceRange.minVariantPrice.amount);
 
-  return {
+  const mappedProduct: Product = {
     id: product.id,
     title: product.title,
     handle: product.handle,
@@ -392,6 +393,12 @@ function mapProduct(product: ShopifyCatalogProduct): Product {
     variants: product.variants.nodes,
     collections: product.collections.nodes,
   };
+
+  mappedProduct.priceRange = {
+    minVariantPrice: getMinimumVariantPrice(mappedProduct),
+  };
+
+  return mappedProduct;
 }
 
 function mapCollection(collection: ShopifyCatalogCollection): Collection {
