@@ -44,6 +44,28 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
     ? Object.fromEntries(getVariantOptions(defaultVariant).map(({ name, value }) => [name, value]))
     : {};
 
+  const getOptionValues = (optionIndex: number, selections: Record<string, string>) => {
+    const option = product.options?.[optionIndex];
+    if (!option) return [];
+
+    const compatibleValues = productVariants
+      .filter((variant) => {
+        const variantOptions = getVariantOptions(variant);
+
+        return variantOptions.slice(0, optionIndex).every(({ name, value }) =>
+          !selections[name] || selections[name] === value
+        );
+      })
+      .map((variant) => getVariantOptions(variant)[optionIndex]?.value)
+      .filter((value): value is string => Boolean(value));
+
+    const compatibleValueSet = new Set(compatibleValues);
+
+    return option.values?.length
+      ? option.values.filter((value) => compatibleValueSet.has(value))
+      : Array.from(compatibleValueSet);
+  };
+
   // Image gallery state
   const galleryImages = product.images && product.images.length > 0 
     ? product.images 
@@ -102,6 +124,30 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
     if (newQty >= 1) {
       setQuantity(newQty);
     }
+  };
+
+  const selectOption = (optionIndex: number, optionName: string, value: string) => {
+    setSelectedOptions((current) => {
+      const nextSelections = { ...current, [optionName]: value };
+      const exactVariantExists = productVariants.some((variant) =>
+        getVariantOptions(variant).every(
+          ({ name, value: variantValue }) => nextSelections[name] === variantValue
+        )
+      );
+
+      if (exactVariantExists) return nextSelections;
+
+      const compatibleVariant = productVariants.find((variant) => {
+        const variantOptions = getVariantOptions(variant);
+        return variantOptions.slice(0, optionIndex + 1).every(
+          ({ name, value: variantValue }) => nextSelections[name] === variantValue
+        );
+      });
+
+      return compatibleVariant
+        ? Object.fromEntries(getVariantOptions(compatibleVariant).map(({ name, value }) => [name, value]))
+        : nextSelections;
+    });
   };
 
   // Add to Cart Simulation
@@ -299,9 +345,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
             {showVariantSelector && (
               <div className="space-y-5">
                 {(product.options || []).map((option, optionIndex) => {
-                  const values = option.values?.length
-                    ? option.values
-                    : Array.from(new Set(productVariants.map((variant) => getVariantOptions(variant)[optionIndex]?.value).filter(Boolean)));
+                  const values = getOptionValues(optionIndex, selectedOptions);
 
                   return (
                     <div key={option.name} className="space-y-3">
@@ -315,7 +359,7 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
                             <button
                               key={value}
                               type="button"
-                              onClick={() => setSelectedOptions((current) => ({ ...current, [option.name]: value }))}
+                              onClick={() => selectOption(optionIndex, option.name, value)}
                               className={`px-5 py-2.5 rounded-xl border-2 text-xs font-bold transition-all cursor-pointer ${
                                 isActive
                                   ? "border-primary bg-primary/5 text-primary shadow-sm"
