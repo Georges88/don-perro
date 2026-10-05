@@ -24,6 +24,18 @@ const CATEGORY_IMAGE_OVERRIDES: Record<string, string> = {
   Beds: "/images/categories/beds.png",
   "Bird Food": "/images/categories/bird-food.png",
   "Bowls And Feeders": "/images/categories/bowls-and-feeders.png",
+  Brushes: "/images/categories/brushes-v2.png",
+  Collars: "/images/categories/collars.png",
+  "Crates & Bags": "/images/categories/crates-and-bags.png",
+  "Fish Food": "/images/categories/fish-food.png",
+  Harnesses: "/images/categories/harnesses.png",
+  "Health & Wellness": "/images/categories/health-and-wellness.png",
+  "Ice Cream": "/images/categories/ice-cream.png",
+  Leashes: "/images/categories/leashes.png",
+  Perfumes: "/images/categories/perfumes.png",
+  "Pet Milk": "/images/categories/pet-milk.png",
+  "Rabbit Food": "/images/categories/rabbit-food.png",
+  Toys: "/images/categories/toys.png",
 };
 
 function normalize(value: string) {
