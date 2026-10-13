@@ -37,22 +37,20 @@ async function createShopifyLogoutRedirect(request: Request) {
   try {
     const { domain } = getCustomerAccountConfig();
     const discovery = await getOpenIdConfiguration(domain);
-    const returnUrl = new URL("/", request.url);
+    const returnUrl = new URL("/login", request.url);
     const idToken = getCookie(request.headers.get("cookie") || "", CUSTOMER_ID_TOKEN_COOKIE);
 
-    if (discovery.end_session_endpoint) {
+    if (discovery.end_session_endpoint && idToken) {
       const logoutUrl = new URL(discovery.end_session_endpoint);
       logoutUrl.searchParams.set("post_logout_redirect_uri", returnUrl.toString());
-      if (idToken) {
-        logoutUrl.searchParams.set("id_token_hint", idToken);
-      }
+      logoutUrl.searchParams.set("id_token_hint", idToken);
       return NextResponse.redirect(logoutUrl);
     }
 
     return NextResponse.redirect(returnUrl);
   } catch (error) {
     console.error(error);
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 }
 

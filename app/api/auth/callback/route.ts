@@ -21,24 +21,32 @@ function getSafeReturnTo(value: string | undefined) {
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const error = requestUrl.searchParams.get("error");
+  const errorDescription = requestUrl.searchParams.get("error_description");
   const code = requestUrl.searchParams.get("code");
   const state = requestUrl.searchParams.get("state");
 
   if (error) {
-    return NextResponse.redirect(new URL(`/login?auth_error=${encodeURIComponent(error)}`, request.url));
+    return NextResponse.redirect(
+      new URL(`/login?auth_error=${encodeURIComponent(errorDescription || error)}`, request.url),
+    );
   }
 
   try {
     const cookieHeader = request.headers.get("cookie") || "";
     const cookies = parseCookieHeader(cookieHeader);
     const savedState = cookies[OAUTH_STATE_COOKIE];
+    const savedNonce = cookies[OAUTH_NONCE_COOKIE];
     const verifier = cookies[OAUTH_VERIFIER_COOKIE];
 
-    if (!code || !state || !savedState || state !== savedState || !verifier) {
+    if (!code || !state || !savedState || state !== savedState || !savedNonce || !verifier) {
       throw new Error("Shopify customer login could not be verified. Please try again.");
     }
 
     const token = await exchangeCustomerAuthorizationCode(code, verifier);
+    if (!token.id_token || getIdTokenNonce(token.id_token) !== savedNonce) {
+      throw new Error("Shopify customer login nonce validation failed. Please try again.");
+    }
+
     const returnTo = getSafeReturnTo(cookies[OAUTH_RETURN_TO_COOKIE]);
     const response = NextResponse.redirect(new URL(returnTo, request.url));
     const baseCookieOptions = {
@@ -96,4 +104,12 @@ function parseCookieHeader(cookieHeader: string) {
         return [cookie.slice(0, separatorIndex), decodeURIComponent(cookie.slice(separatorIndex + 1))];
       }),
   );
+}
+
+function getIdTokenNonce(idToken: string) {
+  const [, encodedPayload] = idToken.split(".");
+  if (!encodedPayload) return null;
+
+  const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8")) as { nonce?: unknown };
+  return typeof payload.nonce === "string" ? payload.nonce : null;
 }
