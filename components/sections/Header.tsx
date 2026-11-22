@@ -8,30 +8,45 @@ import { getWishlist } from "@/lib/wishlist";
 import { getCurrentUser } from "@/lib/auth";
 import type { MenuItem } from "@/types/shopify";
 
+const DOG_NAV_ITEMS: MenuItem[] = [
+  { label: "Dog Treats", href: "/shop?category=dog&type=Dog%20Treats", items: [] },
+  { label: "Dog Wet Food", href: "/shop?category=dog&type=Dog%20Wet%20Food", items: [] },
+  { label: "Dog Dry Food", href: "/shop?category=dog&type=Dog%20Dry%20Food", items: [] },
+  { label: "Dog Shampoo", href: "/shop?category=dog&type=Dog%20Shampoo", items: [] },
+];
+
+const CAT_NAV_ITEMS: MenuItem[] = [
+  { label: "Cat Litter", href: "/shop?category=cat&type=Cat%20Litter", items: [] },
+  { label: "Cat Wet Food", href: "/shop?category=cat&type=Cat%20Wet%20Food", items: [] },
+  { label: "Cat Dry Food", href: "/shop?category=cat&type=Cat%20Dry%20Food", items: [] },
+  { label: "Cat Shampoo", href: "/shop?category=cat&type=Cat%20Shampoo", items: [] },
+  { label: "Cat Treats", href: "/shop?category=cat&type=Cat%20Treats", items: [] },
+];
+
 const FALLBACK_NAV_ITEMS: MenuItem[] = [
   { label: "Shop All", href: "/shop", items: [] },
   {
     label: "Dogs",
     href: "/shop?category=dog",
-    items: [
-      { label: "Dog Food", href: "/shop?category=dog&type=Organic%20Food", items: [] },
-      { label: "Dog Treats", href: "/shop?category=dog&type=Treats", items: [] },
-      { label: "Dog Toys", href: "/shop?category=dog&type=Interactive%20Toys", items: [] },
-      { label: "Dog Accessories", href: "/shop?category=dog&type=Accessories", items: [] },
-    ],
+    items: DOG_NAV_ITEMS,
   },
   {
     label: "Cats",
     href: "/shop?category=cat",
-    items: [
-      { label: "Cat Food", href: "/shop?category=cat&type=Organic%20Food", items: [] },
-      { label: "Cat Treats", href: "/shop?category=cat&type=Treats", items: [] },
-      { label: "Cat Toys", href: "/shop?category=cat&type=Interactive%20Toys", items: [] },
-      { label: "Cat Accessories", href: "/shop?category=cat&type=Accessories", items: [] },
-    ],
+    items: CAT_NAV_ITEMS,
   },
   { label: "New Arrivals", href: "/shop?sort=Newest+Arrivals", items: [] },
 ];
+
+function withCompletePetMenus(items: MenuItem[]) {
+  return items.map(item => {
+    const label = item.label.trim().toLowerCase();
+
+    if (label === "dogs") return { ...item, items: DOG_NAV_ITEMS };
+    if (label === "cats") return { ...item, items: CAT_NAV_ITEMS };
+    return item;
+  });
+}
 
 const CART_STORAGE_KEY = "don_perro_cart";
 const PENDING_CHECKOUT_KEY = "don_perro_pending_checkout";
@@ -219,7 +234,7 @@ export default function Header() {
         const items = payload?.menu?.items;
 
         if (isMounted && Array.isArray(items) && items.length > 0) {
-          setNavItems(items);
+          setNavItems(withCompletePetMenus(items));
         }
       } catch (error) {
         console.error("Unable to load Shopify menu", error);

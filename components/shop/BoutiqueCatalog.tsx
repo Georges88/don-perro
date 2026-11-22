@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
   Filter, 
@@ -30,6 +30,53 @@ interface BoutiqueCatalogProps {
   initialCollections: Collection[];
 }
 
+const PET_CATEGORY_OPTIONS = [
+  { value: "dog", label: "Dogs", aliases: ["dog"] },
+  { value: "cat", label: "Cats", aliases: ["cat"] },
+  { value: "fish", label: "Fish", aliases: ["fish"] },
+  { value: "bird", label: "Birds", aliases: ["bird"] },
+  { value: "rabbit", label: "Rabbits", aliases: ["rabbit"] },
+  { value: "hamster", label: "Hamsters", aliases: ["hamster"] },
+  { value: "guinea-pig", label: "Guinea Pigs", aliases: ["guinea-pig", "guinea-pigs"] },
+  { value: "reptile", label: "Reptiles", aliases: ["reptile"] },
+  { value: "turtle", label: "Turtles", aliases: ["turtle"] },
+  { value: "ferret", label: "Ferrets", aliases: ["ferret"] },
+  { value: "horse", label: "Horses", aliases: ["horse"] },
+] as const;
+
+function normalizeCategorySource(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function findPetCategory(value: string) {
+  const normalizedValue = normalizeCategorySource(value);
+
+  return PET_CATEGORY_OPTIONS.find(option => (
+    option.aliases.some(alias => normalizedValue === alias || normalizedValue.startsWith(`${alias}-`))
+  ));
+}
+
+function getProductPetCategories(product: Product) {
+  const collectionCategories = new Set<string>(
+    (product.collections || [])
+      .map(collection => findPetCategory(collection.handle)?.value)
+      .filter((category): category is NonNullable<typeof category> => Boolean(category)),
+  );
+
+  if (collectionCategories.size > 0) return collectionCategories;
+
+  const tagCategories = new Set<string>(
+    product.tags
+      .map(tag => findPetCategory(tag)?.value)
+      .filter((category): category is NonNullable<typeof category> => Boolean(category)),
+  );
+
+  if (tagCategories.size > 0) return tagCategories;
+
+  const productTypeCategory = findPetCategory(product.productType)?.value;
+  return new Set(productTypeCategory ? [productTypeCategory] : []);
+}
+
 function productMatchesCollectionHandle(product: Product, collectionHandle: string) {
   const handle = collectionHandle.toLowerCase();
   const tags = product.tags.map(tag => tag.toLowerCase());
@@ -52,28 +99,15 @@ function productMatchesCollectionHandle(product: Product, collectionHandle: stri
 }
 
 function productMatchesPetCategory(product: Product, category: string) {
-  const normalizedCategory = category.toLowerCase();
-  const tags = product.tags.map(tag => tag.toLowerCase());
-  const collectionHandles = product.collections?.map(collection => collection.handle.toLowerCase()) || [];
-  const collectionCategories = new Set<string>(
-    collectionHandles
-      .map((handle) => {
-        if (handle === "dog" || handle.startsWith("dog-")) return "dog";
-        if (handle === "cat" || handle.startsWith("cat-")) return "cat";
-        return "";
-      })
-      .filter(Boolean),
-  );
-
-  if (collectionCategories.size > 0) {
-    return collectionCategories.has(normalizedCategory);
-  }
-
-  return tags.includes(normalizedCategory);
+  return getProductPetCategories(product).has(normalizeCategorySource(category));
 }
 
 function cleanCollectionLabel(title: string) {
-  return title.replace(/^(dog|cat)\s+/i, "").trim();
+  const category = findPetCategory(title);
+  if (!category) return title.trim();
+
+  const normalizedAliases = category.aliases.map(alias => alias.replace(/-/g, "\\s+"));
+  return title.replace(new RegExp(`^(${normalizedAliases.join("|")})\\s+`, "i"), "").trim();
 }
 
 function getProductTypeLabel(product: Product) {
@@ -90,20 +124,21 @@ function getProductTypeLabel(product: Product) {
 }
 
 function productTypeBelongsToCategory(typeLabel: string, category: string) {
-  const normalizedType = typeLabel.trim().toLowerCase();
-
-  if (category === "dog") return !normalizedType.startsWith("cat ");
-  if (category === "cat") return !normalizedType.startsWith("dog ");
-
-  return true;
+  const typeCategory = findPetCategory(typeLabel);
+  return !typeCategory || typeCategory.value === normalizeCategorySource(category);
 }
 
 function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   const searchParams = useSearchParams();
-  const categoryOptions = [
-    { value: "dog", label: "Dogs" },
-    { value: "cat", label: "Cats" },
-  ].filter(option => initialProducts.some(product => productMatchesPetCategory(product, option.value)));
+  const pathname = usePathname();
+  const router = useRouter();
+  const pageQuery = searchParams.get("page");
+  const filterQueryParams = new URLSearchParams(searchParams.toString());
+  filterQueryParams.delete("page");
+  const filterQueryKey = filterQueryParams.toString();
+  const categoryOptions = PET_CATEGORY_OPTIONS.filter(option => (
+    initialProducts.some(product => productMatchesPetCategory(product, option.value))
+  ));
 
   // ----------------------------------------------------
   // Interactive Filter States
@@ -124,7 +159,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
     "Price: Low to High",
     "Price: High to Low"
   ];
-  const itemsPerPageOptions = [10, 15, 20];
+  const itemsPerPageOptions = [10, 20, 50];
   
   // UI Layout States
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -133,6 +168,27 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [cartModalItem, setCartModalItem] = useState<{ product: Product; quantity: number; selectedVariantId: string } | null>(null);
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
+
+  const updatePageQuery = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (page <= 1) {
+      if (!params.has("page")) return;
+      params.delete("page");
+    } else {
+      if (params.get("page") === String(page)) return;
+      params.set("page", String(page));
+    }
+
+    const query = params.toString();
+    router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
+  };
+
+  const resetToFirstPage = () => {
+    setCurrentPage(1);
+    updatePageQuery(1);
+  };
+
   const hasActiveFilters = selectedCategories.length > 0
     || selectedTypes.length > 0
     || selectedTags.length > 0
@@ -147,6 +203,10 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
             .filter(product => productMatchesPetCategory(product, selectedCategory))
             .map(getProductTypeLabel)
             .filter(type => productTypeBelongsToCategory(type, selectedCategory))
+            .filter(type => !(
+              selectedCategory === "dog"
+              && ["treats", "health & wellness"].includes(type.trim().toLowerCase())
+            ))
             .filter(Boolean),
         ),
       ).sort((a, b) => a.localeCompare(b))
@@ -188,19 +248,19 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
       ? collectionQuery.split(",").map(collection => collection.trim()).filter(collection => collection && collection !== "all")
       : [];
     const firstCollection = collectionHandles[0]?.toLowerCase() || "";
-    const collectionCategory = firstCollection.startsWith("dog-")
-      ? "dog"
-      : firstCollection.startsWith("cat-")
-        ? "cat"
-        : "";
+    const collectionCategory = findPetCategory(firstCollection)?.value || "";
 
     setSelectedCategories(categoryQuery ? [categoryQuery] : collectionCategory ? [collectionCategory] : []);
     setSelectedTypes(typeQuery ? [typeQuery] : []);
     setSelectedTags(tagQuery ? tagQuery.split(",").map(tag => tag.trim()).filter(Boolean) : []);
     setSelectedCollections(collectionHandles);
     setSearchQuery(searchQueryParam || "");
-    setCurrentPage(1);
-  }, [searchParams]);
+  }, [filterQueryKey]);
+
+  useEffect(() => {
+    const parsedPage = Number.parseInt(pageQuery || "1", 10);
+    setCurrentPage(Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1);
+  }, [pageQuery]);
 
   // ----------------------------------------------------
   // Hardcoded items tags & badges details mapping
@@ -230,7 +290,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
     setSelectedCategories([category]);
     setSelectedTypes([]);
     setSelectedCollections([]);
-    setCurrentPage(1);
+    resetToFirstPage();
   };
 
   // Toggle Product Type Checkboxes
@@ -238,7 +298,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
     setSelectedTypes(prev => 
       prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
     );
-    setCurrentPage(1);
+    resetToFirstPage();
   };
 
   // Clear all filters
@@ -250,7 +310,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
     setPriceRange(300);
     setInStockOnly(false);
     setSearchQuery("");
-    setCurrentPage(1);
+    resetToFirstPage();
   };
 
   // ----------------------------------------------------
@@ -266,7 +326,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
       if (!matchTitle && !matchDesc && !matchTags) return false;
     }
 
-    // 2. Category tag check ("dog", "cat")
+    // 2. Pet category check
     if (selectedCategories.length > 0) {
       const matchCat = selectedCategories.some(cat => (
         productMatchesPetCategory(product, cat)
@@ -356,6 +416,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   const goToPage = (page: number) => {
     const nextPage = Math.min(Math.max(1, page), totalPages);
     setCurrentPage(nextPage);
+    updatePageQuery(nextPage);
     scrollToShopTop();
   };
 
@@ -451,7 +512,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setCurrentPage(1);
+                  resetToFirstPage();
                 }}
                 className="bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-sans w-full p-0 text-on-surface"
               />
@@ -498,7 +559,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                           onClick={() => {
                             setSortOption(option);
                             setIsSortOpen(false);
-                            setCurrentPage(1);
+                            resetToFirstPage();
                           }}
                           className={`w-full text-left px-4 py-2 text-xs font-semibold transition-colors flex items-center justify-between cursor-pointer ${
                             sortOption === option 
@@ -580,7 +641,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                   ))
                 ) : (
                   <p className="text-xs text-secondary/80 leading-relaxed">
-                    Select Dogs or Cats to see matching product types.
+                    Select an animal to see matching product types.
                   </p>
                 )}
               </div>
@@ -607,7 +668,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                   value={priceRange}
                   onChange={(e) => {
                     setPriceRange(Number(e.target.value));
-                    setCurrentPage(1);
+                    resetToFirstPage();
                   }}
                   className="w-full h-1 bg-secondary-container rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
                 />
@@ -629,7 +690,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                   checked={inStockOnly}
                   onChange={() => {
                     setInStockOnly(!inStockOnly);
-                    setCurrentPage(1);
+                    resetToFirstPage();
                   }}
                   className="rounded border-outline/30 text-primary focus:ring-primary h-4.5 w-4.5"
                 />
@@ -682,9 +743,9 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
 
                   {/* Clean badge indicators */}
                   <div className="hidden sm:flex items-center gap-2">
-                    {selectedCategories.map(cat => (
-                      <span key={cat} className="bg-secondary-container text-on-secondary-container px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
-                        {cat}s
+                    {selectedCategories.map(category => (
+                      <span key={category} className="bg-secondary-container text-on-secondary-container px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+                        {categoryOptions.find(option => option.value === category)?.label || category}
                       </span>
                     ))}
                     {selectedTypes.map(typ => (
@@ -739,7 +800,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                                 onClick={() => {
                                   setItemsPerPage(count);
                                   setIsItemsPerPageOpen(false);
-                                  setCurrentPage(1);
+                                  resetToFirstPage();
                                 }}
                                 className={`w-full text-left px-4 py-2 text-xs font-semibold transition-colors flex items-center justify-between cursor-pointer ${
                                   itemsPerPage === count
@@ -997,7 +1058,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                     ))
                   ) : (
                     <p className="text-xs text-secondary/80 leading-relaxed">
-                      Select Dogs or Cats to see matching product types.
+                      Select an animal to see matching product types.
                     </p>
                   )}
                 </div>
@@ -1021,7 +1082,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                   value={priceRange}
                   onChange={(e) => {
                     setPriceRange(Number(e.target.value));
-                    setCurrentPage(1);
+                    resetToFirstPage();
                   }}
                   className="w-full h-1 bg-secondary-container appearance-none cursor-pointer accent-primary focus:outline-none"
                 />
@@ -1042,7 +1103,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                     checked={inStockOnly}
                     onChange={() => {
                       setInStockOnly(!inStockOnly);
-                      setCurrentPage(1);
+                      resetToFirstPage();
                     }}
                     className="rounded border-outline-variant/60 accent-primary h-5 w-5 cursor-pointer"
                   />
