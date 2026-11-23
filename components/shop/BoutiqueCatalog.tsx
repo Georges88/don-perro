@@ -44,8 +44,33 @@ const PET_CATEGORY_OPTIONS = [
   { value: "horse", label: "Horses", aliases: ["horse"] },
 ] as const;
 
+const SHARED_DOG_AND_CAT_PRODUCT_TYPES = [
+  "Bowls And Feeders",
+  "Brushes",
+  "Collars",
+  "Crates & Bags",
+  "Harnesses",
+  "Health & Wellness",
+  "Perfumes",
+  "Leashes",
+  "Pet Milk",
+  "Toys",
+] as const;
+
+const SHARED_PRODUCT_TYPES_BY_CATEGORY: Record<string, readonly string[]> = {
+  dog: [...SHARED_DOG_AND_CAT_PRODUCT_TYPES, "Ice Cream"],
+  cat: SHARED_DOG_AND_CAT_PRODUCT_TYPES,
+};
+
 function normalizeCategorySource(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function productTypeIsSharedWithCategory(typeLabel: string, category: string) {
+  const sharedTypes = SHARED_PRODUCT_TYPES_BY_CATEGORY[normalizeCategorySource(category)] || [];
+  const normalizedType = typeLabel.trim().toLowerCase();
+
+  return sharedTypes.some(type => type.toLowerCase() === normalizedType);
 }
 
 function findPetCategory(value: string) {
@@ -200,12 +225,15 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
     ? Array.from(
         new Set(
           initialProducts
-            .filter(product => productMatchesPetCategory(product, selectedCategory))
+            .filter(product => (
+              productMatchesPetCategory(product, selectedCategory)
+              || productTypeIsSharedWithCategory(getProductTypeLabel(product), selectedCategory)
+            ))
             .map(getProductTypeLabel)
             .filter(type => productTypeBelongsToCategory(type, selectedCategory))
             .filter(type => !(
               selectedCategory === "dog"
-              && ["treats", "health & wellness"].includes(type.trim().toLowerCase())
+              && type.trim().toLowerCase() === "treats"
             ))
             .filter(Boolean),
         ),
@@ -328,9 +356,13 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
 
     // 2. Pet category check
     if (selectedCategories.length > 0) {
+      const productType = getProductTypeLabel(product);
       const matchCat = selectedCategories.some(cat => (
-        productMatchesPetCategory(product, cat)
-        && productTypeBelongsToCategory(getProductTypeLabel(product), cat)
+        (
+          productMatchesPetCategory(product, cat)
+          && productTypeBelongsToCategory(productType, cat)
+        )
+        || productTypeIsSharedWithCategory(productType, cat)
       ));
       if (!matchCat) return false;
     }
