@@ -10,6 +10,25 @@ export interface MoneyV2 {
   currencyCode: string;
 }
 
+export interface AutomaticDiscountPreview {
+  variantId: string;
+  originalPrice: MoneyV2;
+  discountedPrice: MoneyV2;
+  discountAmount: MoneyV2;
+  discountTitle: string;
+  discountPercentage: number;
+}
+
+export interface CartLineDiscountPreview {
+  variantId: string;
+  quantity: number;
+  originalTotal: MoneyV2;
+  discountedTotal: MoneyV2;
+  discountAmount: MoneyV2;
+  discountTitle: string;
+  discountPercentage: number;
+}
+
 export interface ProductVariant {
   id: string;
   title: string;

@@ -22,8 +22,9 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { Product } from "@/types/shopify";
 import { getWishlist, toggleWishlist } from "@/lib/wishlist";
-import { getDefaultVariant, hasVariantPriceRange } from "@/lib/pricing";
+import { getDefaultVariant } from "@/lib/pricing";
 import { searchProducts } from "@/lib/elasticSearch";
+import ProductSalePrice from "@/components/shop/ProductSalePrice";
 
 interface SearchResultsProps {
   products: Product[];
@@ -411,10 +412,6 @@ export default function SearchResults({ products }: SearchResultsProps) {
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-6" id="search-results-grid">
                 {currentItems.map(product => {
                   const badge = getBadge(product);
-                  const price = parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2);
-                  const pricePrefix = hasVariantPriceRange(product) ? "From " : "";
-                  const hasCompare = product.compareAtPriceRange && parseFloat(product.compareAtPriceRange.minVariantPrice.amount) > 0;
-                  const comparePrice = hasCompare ? parseFloat(product.compareAtPriceRange!.minVariantPrice.amount).toFixed(2) : null;
 
                   return (
                     <div 
@@ -487,16 +484,12 @@ export default function SearchResults({ products }: SearchResultsProps) {
                         {product.title}
                       </h3>
 
-                      <div className="mt-auto pt-1 flex items-baseline gap-2">
-                        <span className="text-primary font-extrabold text-sm sm:text-base font-heading">
-                          {pricePrefix}${price}
-                        </span>
-                        {comparePrice && (
-                          <span className="text-[11px] text-secondary/40 line-through font-mono">
-                            ${comparePrice}
-                          </span>
-                        )}
-                      </div>
+                      <ProductSalePrice
+                        product={product}
+                        className="mt-auto flex flex-wrap items-baseline gap-2 pt-1"
+                        priceClassName="text-sm font-extrabold text-primary sm:text-base font-heading"
+                        originalPriceClassName="text-[11px] text-secondary/40 line-through font-mono"
+                      />
                     </Link>
                     </div>
                   );
@@ -614,16 +607,12 @@ export default function SearchResults({ products }: SearchResultsProps) {
                     {quickViewProduct.title}
                   </h2>
                   
-                  <div className="flex items-baseline gap-2 mb-4">
-                    <span className="text-primary font-bold text-lg sm:text-xl">
-                      {hasVariantPriceRange(quickViewProduct) ? "From " : ""}${parseFloat(quickViewProduct.priceRange.minVariantPrice.amount).toFixed(2)}
-                    </span>
-                    {quickViewProduct.compareAtPriceRange && parseFloat(quickViewProduct.compareAtPriceRange.minVariantPrice.amount) > 0 && (
-                      <span className="text-xs text-secondary/40 line-through font-mono">
-                        ${parseFloat(quickViewProduct.compareAtPriceRange.minVariantPrice.amount).toFixed(2)}
-                      </span>
-                    )}
-                  </div>
+                  <ProductSalePrice
+                    product={quickViewProduct}
+                    className="mb-4 flex flex-wrap items-baseline gap-2"
+                    priceClassName="text-lg font-bold text-primary sm:text-xl"
+                    originalPriceClassName="text-xs text-secondary/40 line-through font-mono"
+                  />
 
                   <p className="text-secondary text-xs sm:text-sm leading-relaxed mb-6 line-clamp-4">
                     {quickViewProduct.description}

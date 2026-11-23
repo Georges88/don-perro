@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
-  Star, 
   ShoppingCart, 
   Truck, 
   ShieldCheck, 
@@ -16,8 +15,9 @@ import {
 } from "lucide-react";
 import { Product } from "@/types/shopify";
 import { getWishlist, toggleWishlist, isInWishlist } from "@/lib/wishlist";
-import { formatMoney, getDefaultVariant, getSelectedVariant, getSelectedVariantCompareAtPrice, getSelectedVariantPrice, hasVariantPriceRange, hasVisibleVariants } from "@/lib/pricing";
+import { formatMoney, getDefaultVariant, getSelectedVariant, getSelectedVariantPrice, hasVariantPriceRange, hasVisibleVariants } from "@/lib/pricing";
 import ProductCardActions from "@/components/shop/ProductCardActions";
+import ProductSalePrice from "@/components/shop/ProductSalePrice";
 
 interface ProductDetailsProps {
   product: Product;
@@ -211,11 +211,6 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
     : getSelectedVariant(product);
   const resolvedVariant = selectedVariant;
   const selectedVariantId = selectedVariant?.id;
-  const selectedPrice = getSelectedVariantPrice(product, selectedVariantId);
-  const selectedCompareAtPrice = getSelectedVariantCompareAtPrice(product, selectedVariantId);
-  const comparePrice = selectedCompareAtPrice && Number(selectedCompareAtPrice.amount) > Number(selectedPrice.amount)
-    ? formatMoney(selectedCompareAtPrice, quantity)
-    : null;
 
   useEffect(() => {
     if (selectedVariant?.image?.url) {
@@ -306,33 +301,19 @@ export default function ProductDetails({ product, allProducts }: ProductDetailsP
                 {product.title}
               </h1>
 
-              {/* Rating representation */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center text-[#ffcc00]">
-                  <Star className="w-4 h-4 fill-current" />
-                  <Star className="w-4 h-4 fill-current" />
-                  <Star className="w-4 h-4 fill-current" />
-                  <Star className="w-4 h-4 fill-current" />
-                  <Star className="w-4 h-4 fill-current opacity-80" />
-                </div>
-                <span className="text-xs font-bold text-secondary">
-                  ({product.rating?.count || 128} Reviews)
-                </span>
-              </div>
             </div>
 
             {/* Price Frame */}
             <div className="pb-4 border-b border-surface-variant/40 space-y-2">
-              <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-heading font-extrabold text-primary">
-                  {formatMoney(selectedPrice, quantity)}
-                </span>
-                {comparePrice && (
-                  <span className="text-lg text-secondary/50 line-through font-medium">
-                    {comparePrice}
-                  </span>
-                )}
-              </div>
+              <ProductSalePrice
+                product={product}
+                variantId={selectedVariantId}
+                quantity={quantity}
+                className="flex flex-wrap items-baseline gap-3"
+                priceClassName="text-3xl font-heading font-extrabold text-primary"
+                originalPriceClassName="text-lg font-medium text-secondary/50 line-through"
+                discountClassName="rounded-full bg-error px-2.5 py-1 text-xs font-bold text-white"
+              />
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div>
                 <span className="text-xs font-semibold text-secondary">

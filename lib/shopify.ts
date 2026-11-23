@@ -2,7 +2,7 @@ import "server-only";
 
 import { mockProducts, mockCollections, mockBrands, mockTestimonials } from "@/data/mockData";
 import { getMinimumVariantPrice } from "@/lib/pricing";
-import { Product, Collection, Brand, Testimonial, ShopifyImage, MoneyV2, Menu } from "@/types/shopify";
+import { Product, Collection, Brand, Testimonial, ShopifyImage, MoneyV2, Menu, AutomaticDiscountPreview, CartLineDiscountPreview } from "@/types/shopify";
 
 const CATALOG_QUERY = `#graphql
   query CatalogData {
@@ -100,6 +100,39 @@ const CART_CREATE_MUTATION = `#graphql
   }
 `;
 
+const CART_DISCOUNT_PREVIEW_MUTATION = `#graphql
+  mutation PreviewAutomaticDiscounts($lines: [CartLineInput!]!) {
+    cartCreate(input: { lines: $lines }) {
+      cart {
+        lines(first: 250) {
+          nodes {
+            quantity
+            merchandise {
+              ... on ProductVariant {
+                id
+              }
+            }
+            cost {
+              subtotalAmount { amount currencyCode }
+              totalAmount { amount currencyCode }
+            }
+            discountAllocations {
+              discountedAmount { amount currencyCode }
+              ... on CartAutomaticDiscountAllocation {
+                title
+              }
+            }
+          }
+        }
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
 const MENU_QUERY = `#graphql
   query Menu($handle: String!) {
     menu(handle: $handle) {
@@ -180,6 +213,28 @@ interface CartCreateResponse {
     cart: {
       id: string;
       checkoutUrl: string;
+    } | null;
+    userErrors: Array<{ field?: string[] | null; message: string }>;
+  };
+}
+
+interface CartDiscountPreviewResponse {
+  cartCreate: {
+    cart: {
+      lines: {
+        nodes: Array<{
+          quantity: number;
+          merchandise: { id: string };
+          cost: {
+            subtotalAmount: MoneyV2;
+            totalAmount: MoneyV2;
+          };
+          discountAllocations: Array<{
+            discountedAmount: MoneyV2;
+            title?: string;
+          }>;
+        }>;
+      };
     } | null;
     userErrors: Array<{ field?: string[] | null; message: string }>;
   };
@@ -362,6 +417,101 @@ export async function createShopifyCart(
   }
 
   return result.cart;
+}
+
+export async function previewAutomaticDiscounts(variantIds: string[]): Promise<AutomaticDiscountPreview[]> {
+  const uniqueVariantIds = Array.from(new Set(variantIds)).slice(0, 50);
+  if (!uniqueVariantIds.length) return [];
+
+  const data = await shopifyFetch<CartDiscountPreviewResponse>(
+    CART_DISCOUNT_PREVIEW_MUTATION,
+    {
+      lines: uniqueVariantIds.map((merchandiseId) => ({ merchandiseId, quantity: 1 })),
+    },
+    0,
+  );
+  const result = data.cartCreate;
+
+  if (result.userErrors.length) {
+    throw new Error(result.userErrors.map((error) => error.message).join(" "));
+  }
+
+  return (result.cart?.lines.nodes || []).flatMap((line) => {
+    const originalAmount = Number(line.cost.subtotalAmount.amount);
+    const discountedAmount = Number(line.cost.totalAmount.amount);
+    const automaticAllocations = line.discountAllocations.filter((allocation) => allocation.title);
+
+    if (
+      !automaticAllocations.length
+      || !Number.isFinite(originalAmount)
+      || !Number.isFinite(discountedAmount)
+      || originalAmount <= 0
+      || discountedAmount >= originalAmount
+    ) {
+      return [];
+    }
+
+    const discountAmount = originalAmount - discountedAmount;
+    return [{
+      variantId: line.merchandise.id,
+      originalPrice: line.cost.subtotalAmount,
+      discountedPrice: line.cost.totalAmount,
+      discountAmount: {
+        amount: discountAmount.toFixed(2),
+        currencyCode: line.cost.totalAmount.currencyCode,
+      },
+      discountTitle: automaticAllocations.map((allocation) => allocation.title).join(" + "),
+      discountPercentage: Math.round((discountAmount / originalAmount) * 100),
+    }];
+  });
+}
+
+export async function previewCartDiscounts(
+  lines: Array<{ merchandiseId: string; quantity: number }>,
+): Promise<CartLineDiscountPreview[]> {
+  const quantities = new Map<string, number>();
+  lines.forEach((line) => {
+    const quantity = Math.max(1, Math.min(99, Math.floor(line.quantity)));
+    quantities.set(line.merchandiseId, (quantities.get(line.merchandiseId) || 0) + quantity);
+  });
+  const normalizedLines = Array.from(quantities, ([merchandiseId, quantity]) => ({
+    merchandiseId,
+    quantity: Math.min(99, quantity),
+  })).slice(0, 50);
+  if (!normalizedLines.length) return [];
+
+  const data = await shopifyFetch<CartDiscountPreviewResponse>(
+    CART_DISCOUNT_PREVIEW_MUTATION,
+    { lines: normalizedLines },
+    0,
+  );
+  const result = data.cartCreate;
+
+  if (result.userErrors.length) {
+    throw new Error(result.userErrors.map((error) => error.message).join(" "));
+  }
+
+  return (result.cart?.lines.nodes || []).map((line) => {
+    const originalAmount = Number(line.cost.subtotalAmount.amount);
+    const discountedAmount = Number(line.cost.totalAmount.amount);
+    const discountAmount = Math.max(0, originalAmount - discountedAmount);
+    const automaticAllocations = line.discountAllocations.filter((allocation) => allocation.title);
+
+    return {
+      variantId: line.merchandise.id,
+      quantity: line.quantity,
+      originalTotal: line.cost.subtotalAmount,
+      discountedTotal: line.cost.totalAmount,
+      discountAmount: {
+        amount: discountAmount.toFixed(2),
+        currencyCode: line.cost.totalAmount.currencyCode,
+      },
+      discountTitle: automaticAllocations.map((allocation) => allocation.title).join(" + "),
+      discountPercentage: originalAmount > 0
+        ? Math.round((discountAmount / originalAmount) * 100)
+        : 0,
+    };
+  });
 }
 
 function mapProduct(product: ShopifyCatalogProduct): Product {

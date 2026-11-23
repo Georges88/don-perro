@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getBestSellers } from "@/lib/shopify";
 import AddToCartButton from "@/components/shop/AddToCartButton";
 import ProductCardActions from "@/components/shop/ProductCardActions";
-import { hasVariantPriceRange } from "@/lib/pricing";
+import ProductSalePrice from "@/components/shop/ProductSalePrice";
 
 export default async function BestSellers() {
   const products = (await getBestSellers()).slice(0, 4);
@@ -31,11 +31,6 @@ export default async function BestSellers() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           {products.map((product) => {
             const hasSale = product.tags.includes("sale");
-            const price = parseFloat(product.priceRange.minVariantPrice.amount);
-            const pricePrefix = hasVariantPriceRange(product) ? "From " : "";
-            const originalPrice = product.compareAtPriceRange 
-              ? parseFloat(product.compareAtPriceRange.minVariantPrice.amount) 
-              : null;
 
             return (
               <div key={product.id} className="group flex flex-col relative">
@@ -74,16 +69,12 @@ export default async function BestSellers() {
                   <h3 className="text-sm font-bold text-on-surface hover:text-primary transition-colors mt-1 font-sans line-clamp-2">
                     {product.title}
                   </h3>
-                  <div className="flex items-baseline gap-2 mt-auto pt-1">
-                    <span className="text-sm font-bold text-primary">
-                      {pricePrefix}${price.toFixed(2)}
-                    </span>
-                    {originalPrice && (
-                      <span className="text-xs text-outline line-through">
-                        ${originalPrice.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
+                  <ProductSalePrice
+                    product={product}
+                    className="mt-auto flex flex-wrap items-baseline gap-2 pt-1"
+                    priceClassName="text-sm font-bold text-primary"
+                    originalPriceClassName="text-xs text-outline line-through"
+                  />
                 </Link>
 
               </div>

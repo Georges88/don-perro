@@ -103,11 +103,17 @@ export function getSelectedVariantAmount(product: Product, variantId?: string): 
 export function getMinimumVariantPrice(product: Product): MoneyV2 {
   if (!product.variants.length) return product.priceRange.minVariantPrice;
 
-  return product.variants
-    .map((variant) => getVariantPrice(product, variant))
-    .reduce((lowest, price) =>
-      Number(price.amount) < Number(lowest.amount) ? price : lowest
-    );
+  const minimumVariant = getMinimumPriceVariant(product);
+  return minimumVariant ? getVariantPrice(product, minimumVariant) : product.priceRange.minVariantPrice;
+}
+
+export function getMinimumPriceVariant(product: Product): ProductVariant | undefined {
+  return product.variants.reduce<ProductVariant | undefined>((lowest, variant) => {
+    if (!lowest) return variant;
+    return Number(getVariantPrice(product, variant).amount) < Number(getVariantPrice(product, lowest).amount)
+      ? variant
+      : lowest;
+  }, undefined);
 }
 
 export function hasVariantPriceRange(product: Product): boolean {

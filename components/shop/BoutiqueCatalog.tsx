@@ -23,11 +23,25 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { Collection, Product } from "@/types/shopify";
 import { getWishlist, toggleWishlist } from "@/lib/wishlist";
-import { getDefaultVariant, getSelectedVariantAmount, hasVariantPriceRange } from "@/lib/pricing";
+import { getDefaultVariant, getSelectedVariantAmount } from "@/lib/pricing";
+import ProductSalePrice from "@/components/shop/ProductSalePrice";
 
 interface BoutiqueCatalogProps {
   initialProducts: Product[];
   initialCollections: Collection[];
+}
+
+const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50] as const;
+const SHOP_VIEW_STATE_KEY = "don_perro_shop_view_state";
+
+function getValidPage(value: string | null) {
+  const page = Number.parseInt(value || "1", 10);
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+function getValidItemsPerPage(value: string | null) {
+  const count = Number.parseInt(value || "10", 10);
+  return ITEMS_PER_PAGE_OPTIONS.includes(count as (typeof ITEMS_PER_PAGE_OPTIONS)[number]) ? count : 10;
 }
 
 const PET_CATEGORY_OPTIONS = [
@@ -158,6 +172,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   const pathname = usePathname();
   const router = useRouter();
   const pageQuery = searchParams.get("page");
+  const itemsPerPageQuery = searchParams.get("perPage");
   const filterQueryParams = new URLSearchParams(searchParams.toString());
   filterQueryParams.delete("page");
   const filterQueryKey = filterQueryParams.toString();
@@ -184,11 +199,11 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
     "Price: Low to High",
     "Price: High to Low"
   ];
-  const itemsPerPageOptions = [10, 20, 50];
+  const itemsPerPageOptions = ITEMS_PER_PAGE_OPTIONS;
   
   // UI Layout States
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(() => getValidPage(pageQuery));
+  const [itemsPerPage, setItemsPerPage] = useState<number>(() => getValidItemsPerPage(itemsPerPageQuery));
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState<boolean>(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [cartModalItem, setCartModalItem] = useState<{ product: Product; quantity: number; selectedVariantId: string } | null>(null);
@@ -212,6 +227,23 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   const resetToFirstPage = () => {
     setCurrentPage(1);
     updatePageQuery(1);
+  };
+
+  const changeItemsPerPage = (count: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    params.delete("page");
+    if (count === 10) {
+      params.delete("perPage");
+    } else {
+      params.set("perPage", String(count));
+    }
+
+    setItemsPerPage(count);
+    setCurrentPage(1);
+
+    const query = params.toString();
+    router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
   };
 
   const hasActiveFilters = selectedCategories.length > 0
@@ -286,9 +318,40 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   }, [filterQueryKey]);
 
   useEffect(() => {
-    const parsedPage = Number.parseInt(pageQuery || "1", 10);
-    setCurrentPage(Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1);
+    setCurrentPage(getValidPage(pageQuery));
   }, [pageQuery]);
+
+  useEffect(() => {
+    setItemsPerPage(getValidItemsPerPage(itemsPerPageQuery));
+  }, [itemsPerPageQuery]);
+
+  useEffect(() => {
+    try {
+      const savedView = sessionStorage.getItem(SHOP_VIEW_STATE_KEY);
+      if (!savedView) return;
+
+      const parsed = JSON.parse(savedView) as { url?: string; scrollY?: number };
+      const query = searchParams.toString();
+      const currentUrl = `${pathname}${query ? `?${query}` : ""}`;
+
+      if (parsed.url !== currentUrl || !Number.isFinite(parsed.scrollY)) return;
+
+      let secondFrame = 0;
+      const firstFrame = window.requestAnimationFrame(() => {
+        secondFrame = window.requestAnimationFrame(() => {
+          window.scrollTo({ top: Math.max(0, parsed.scrollY || 0), behavior: "auto" });
+          sessionStorage.removeItem(SHOP_VIEW_STATE_KEY);
+        });
+      });
+
+      return () => {
+        window.cancelAnimationFrame(firstFrame);
+        if (secondFrame) window.cancelAnimationFrame(secondFrame);
+      };
+    } catch {
+      sessionStorage.removeItem(SHOP_VIEW_STATE_KEY);
+    }
+  }, []);
 
   // ----------------------------------------------------
   // Hardcoded items tags & badges details mapping
@@ -450,6 +513,18 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
     setCurrentPage(nextPage);
     updatePageQuery(nextPage);
     scrollToShopTop();
+  };
+
+  const rememberCatalogPosition = () => {
+    try {
+      const query = searchParams.toString();
+      sessionStorage.setItem(SHOP_VIEW_STATE_KEY, JSON.stringify({
+        url: `${pathname}${query ? `?${query}` : ""}`,
+        scrollY: window.scrollY,
+      }));
+    } catch {
+      // Browsing still works when storage is unavailable.
+    }
   };
 
   // Add Item to Cart
@@ -744,7 +819,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
           </aside>
 
           {/* Right Product Grid Column */}
-          <div id="shop-results-top" className="flex-grow scroll-mt-28">
+          <div id="shop-results-top" className="min-w-0 flex-grow scroll-mt-28">
             {totalProducts === 0 ? (
               <div className="text-center py-20 bg-surface-container-low rounded-2xl border border-dashed border-outline/20">
                 <Info className="w-10 h-10 text-secondary/50 mx-auto mb-3" />
@@ -763,8 +838,8 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
               <div>
                 
                 {/* Result metadata stats */}
-                <div className="flex flex-wrap justify-between items-center gap-3 text-xs text-secondary/70 mb-4 font-sans font-medium px-1">
-                  <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3 px-1 mb-4 font-sans text-xs font-medium text-secondary/70">
+                  <div className="flex min-h-8 shrink-0 flex-wrap items-center gap-3">
                   <span>
                     Showing <span className="text-primary font-bold font-mono">{startIndex + 1}</span>–
                     <span className="text-primary font-bold font-mono">{endIndex}</span> of{" "}
@@ -774,30 +849,30 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                   </div>
 
                   {/* Clean badge indicators */}
-                  <div className="hidden sm:flex items-center gap-2">
+                  <div className="hidden min-w-0 flex-1 flex-wrap items-center justify-start gap-2 sm:flex">
                     {selectedCategories.map(category => (
-                      <span key={category} className="bg-secondary-container text-on-secondary-container px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+                      <span key={category} className="inline-flex min-h-8 max-w-28 shrink-0 items-center justify-center rounded-full bg-secondary-container px-3 py-1.5 text-center text-[10px] font-bold uppercase leading-tight whitespace-normal text-on-secondary-container">
                         {categoryOptions.find(option => option.value === category)?.label || category}
                       </span>
                     ))}
                     {selectedTypes.map(typ => (
-                      <span key={typ} className="bg-tertiary-container text-on-tertiary-container px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+                      <span key={typ} className="inline-flex min-h-8 max-w-28 shrink-0 items-center justify-center rounded-full bg-tertiary-container px-3 py-1.5 text-center text-[10px] font-bold uppercase leading-tight whitespace-normal text-on-tertiary-container">
                         {typ}
                       </span>
                     ))}
                     {selectedTags.map(tag => (
-                      <span key={tag} className="bg-primary/10 text-primary px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+                      <span key={tag} className="inline-flex min-h-8 max-w-28 shrink-0 items-center justify-center rounded-full bg-primary/10 px-3 py-1.5 text-center text-[10px] font-bold uppercase leading-tight whitespace-normal text-primary">
                         {tag}
                       </span>
                     ))}
                     {selectedCollections.map(collection => (
-                      <span key={collection} className="bg-primary/10 text-primary px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+                      <span key={collection} className="inline-flex min-h-8 max-w-28 shrink-0 items-center justify-center rounded-full bg-primary/10 px-3 py-1.5 text-center text-[10px] font-bold uppercase leading-tight whitespace-normal text-primary">
                         {collection.replace(/-/g, " ")}
                       </span>
                     ))}
                   </div>
 
-                  <div className="relative ml-auto">
+                  <div className="relative ml-auto shrink-0">
                     <button
                       type="button"
                       onClick={() => setIsItemsPerPageOpen(!isItemsPerPageOpen)}
@@ -830,9 +905,8 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                                 key={count}
                                 type="button"
                                 onClick={() => {
-                                  setItemsPerPage(count);
+                                  changeItemsPerPage(count);
                                   setIsItemsPerPageOpen(false);
-                                  resetToFirstPage();
                                 }}
                                 className={`w-full text-left px-4 py-2 text-xs font-semibold transition-colors flex items-center justify-between cursor-pointer ${
                                   itemsPerPage === count
@@ -858,11 +932,6 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                   {paginatedProducts.map((product) => {
                     const badge = getBadgeType(product);
                     const categoryLabel = getCategoryLabel(product);
-                    const formattedPrice = parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2);
-                    const pricePrefix = hasVariantPriceRange(product) ? "From " : "";
-                    const comparePrice = product.compareAtPriceRange 
-                      ? parseFloat(product.compareAtPriceRange.minVariantPrice.amount).toFixed(2)
-                      : null;
 
                     return (
                       <div 
@@ -871,7 +940,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                       >
                         {/* Image Frame Container */}
                         <div className="relative aspect-square overflow-hidden rounded-2xl bg-[#edeeee] mb-4 shadow-[0_4px_10px_rgba(90,96,90,0.02)] group-hover:shadow-[0_10px_30px_rgba(90,96,90,0.08)] group-hover:-translate-y-1 transition-all duration-300">
-                          <Link href={`/products/${product.handle}`} className="block w-full h-full cursor-pointer">
+                          <Link href={`/products/${product.handle}`} onClick={rememberCatalogPosition} className="block w-full h-full cursor-pointer">
                             <img 
                               src={product.featuredImage.url} 
                               alt={product.featuredImage.altText || product.title}
@@ -950,7 +1019,7 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                         </div>
 
                         {/* Description labels */}
-                        <Link href={`/products/${product.handle}`} className="cursor-pointer block">
+                        <Link href={`/products/${product.handle}`} onClick={rememberCatalogPosition} className="cursor-pointer block">
                           <p className="text-[10px] sm:text-[11px] font-bold text-secondary uppercase tracking-wider mb-1">
                             {categoryLabel}
                           </p>
@@ -959,16 +1028,11 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                             {product.title}
                           </h3>
 
-                          <div className="flex items-center gap-2">
-                            <p className="text-primary font-bold text-sm sm:text-base font-sans">
-                              {pricePrefix}${formattedPrice}
-                            </p>
-                            {comparePrice && (
-                              <p className="text-xs text-secondary/40 line-through font-mono">
-                                ${comparePrice}
-                              </p>
-                            )}
-                          </div>
+                          <ProductSalePrice
+                            product={product}
+                            priceClassName="text-sm font-bold text-primary sm:text-base"
+                            originalPriceClassName="text-xs text-secondary/45 line-through font-mono"
+                          />
                         </Link>
                       </div>
                     );
@@ -1214,9 +1278,12 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
                   {quickViewProduct.title}
                 </h2>
                 
-                <p className="text-[#6a5f00] font-sans font-bold text-lg mt-1.5">
-                  {hasVariantPriceRange(quickViewProduct) ? "From " : ""}${parseFloat(quickViewProduct.priceRange.minVariantPrice.amount).toFixed(2)}
-                </p>
+                <ProductSalePrice
+                  product={quickViewProduct}
+                  className="mt-1.5 flex flex-wrap items-baseline gap-2"
+                  priceClassName="text-lg font-bold text-[#6a5f00]"
+                  originalPriceClassName="text-sm text-secondary/45 line-through"
+                />
 
                 <p className="text-xs md:text-sm text-secondary/80 leading-relaxed mt-3.5">
                   {quickViewProduct.description}

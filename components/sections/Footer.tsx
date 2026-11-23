@@ -29,13 +29,33 @@ export default function Footer() {
                 <Instagram className="w-4 h-4" />
               </a>
               <a
-                href="https://www.facebook.com/share/1DEYqsrA37/?mibextid=wwXIfr"
+                href="https://www.facebook.com/share/1FCxb4hpe6/?mibextid=wwXIfr"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 bg-on-secondary/5 hover:bg-primary-fixed hover:text-on-primary-fixed transition-colors rounded-full"
                 aria-label="Don Perro on Facebook"
               >
                 <Facebook className="w-4 h-4" />
+              </a>
+              <a
+                href="https://www.tiktok.com/@don_perroleb?_r=1&_t=ZS-9BeZM4ljetw"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 bg-on-secondary/5 hover:bg-primary-fixed hover:text-on-primary-fixed transition-colors rounded-full"
+                aria-label="Don Perro on TikTok"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 7.917v4.034A9.948 9.948 0 0 1 16 10v4.5a6.5 6.5 0 1 1-8-6.326V12.5a2.5 2.5 0 1 0 4 2V3h4.083A6.005 6.005 0 0 0 21 7.917Z" />
+                </svg>
               </a>
             </div>
           </div>
@@ -118,8 +138,6 @@ export default function Footer() {
             </p>
 
             <p>
-              hello@donperro.com
-              <br />
               +961 71 66 10 11
               <br />
               +961 06 66 09 29

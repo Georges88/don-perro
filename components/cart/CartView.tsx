@@ -20,7 +20,9 @@ import {
 } from "lucide-react";
 import { Product } from "@/types/shopify";
 import { getDefaultVariant, getSelectedVariantAmount, hydrateCartLines, isDefaultVariantTitle } from "@/lib/pricing";
+import { useCartAutomaticDiscounts } from "@/lib/useAutomaticDiscount";
 import ProductCardActions from "@/components/shop/ProductCardActions";
+import ProductSalePrice from "@/components/shop/ProductSalePrice";
 
 // Define Cart Item interface
 interface CartItem {
@@ -115,6 +117,10 @@ export default function CartView({ initialProducts }: CartViewProps) {
   const [checkoutStep, setCheckoutStep] = useState<"cart" | "processing" | "success">("cart");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
+  const cartDiscounts = useCartAutomaticDiscounts(cartItems.map((item) => ({
+    variantId: item.selectedVariantId,
+    quantity: item.quantity,
+  })));
 
   // Initialize cart items from localStorage, or load mockup defaults
   useEffect(() => {
@@ -319,14 +325,32 @@ export default function CartView({ initialProducts }: CartViewProps) {
   };
 
   // Calculate prices
-  const subtotal = cartItems.reduce((sum, item) => {
-    const itemPrice = getSelectedVariantAmount(item.product, item.selectedVariantId);
-    return sum + (itemPrice * item.quantity);
+  const originalSubtotal = cartItems.reduce((sum, item) => {
+    const discount = cartDiscounts[item.selectedVariantId];
+    return sum + (discount
+      ? Number(discount.originalTotal.amount)
+      : getSelectedVariantAmount(item.product, item.selectedVariantId) * item.quantity);
   }, 0);
-
-  const discountAmount = subtotal * promoDiscount;
-  const deliveryFee = subtotal > 150 ? 0 : 5.00;
-  const total = subtotal - discountAmount + deliveryFee;
+  const discountedSubtotal = cartItems.reduce((sum, item) => {
+    const discount = cartDiscounts[item.selectedVariantId];
+    return sum + (discount
+      ? Number(discount.discountedTotal.amount)
+      : getSelectedVariantAmount(item.product, item.selectedVariantId) * item.quantity);
+  }, 0);
+  const automaticDiscountAmount = Math.max(0, originalSubtotal - discountedSubtotal);
+  const automaticDiscountPreviews = Object.values(cartDiscounts).filter(
+    (discount) => Number(discount.discountAmount.amount) > 0,
+  );
+  const automaticDiscountTitle = automaticDiscountPreviews[0]?.discountTitle || "Automatic discount";
+  const automaticDiscountPercentages = new Set(
+    automaticDiscountPreviews.map((discount) => discount.discountPercentage),
+  );
+  const automaticDiscountPercentage = automaticDiscountPercentages.size === 1
+    ? automaticDiscountPreviews[0]?.discountPercentage || 0
+    : 0;
+  const promoDiscountAmount = discountedSubtotal * promoDiscount;
+  const deliveryFee = discountedSubtotal > 150 ? 0 : 5.00;
+  const total = discountedSubtotal - promoDiscountAmount + deliveryFee;
 
   if (!mounted) {
     return (
@@ -530,8 +554,19 @@ export default function CartView({ initialProducts }: CartViewProps) {
                 <div className="divide-y divide-outline-variant/20">
                   <AnimatePresence initial={false}>
                     {cartItems.map((item, lineIndex) => {
-                      const itemPrice = getSelectedVariantAmount(item.product, item.selectedVariantId);
-                      const itemSum = itemPrice * item.quantity;
+                      const shopifyLinePrice = cartDiscounts[item.selectedVariantId];
+                      const automaticDiscount = shopifyLinePrice && Number(shopifyLinePrice.discountAmount.amount) > 0
+                        ? shopifyLinePrice
+                        : undefined;
+                      const originalItemPrice = shopifyLinePrice
+                        ? Number(shopifyLinePrice.originalTotal.amount) / item.quantity
+                        : getSelectedVariantAmount(item.product, item.selectedVariantId);
+                      const itemPrice = shopifyLinePrice
+                        ? Number(shopifyLinePrice.discountedTotal.amount) / item.quantity
+                        : originalItemPrice;
+                      const itemSum = shopifyLinePrice
+                        ? Number(shopifyLinePrice.discountedTotal.amount)
+                        : itemPrice * item.quantity;
                       
                       return (
                         <motion.div 
@@ -607,12 +642,27 @@ export default function CartView({ initialProducts }: CartViewProps) {
                           {/* Base Price info */}
                           <div className="col-span-4 md:col-span-2 text-left md:text-right text-xs font-semibold text-secondary/70">
                             <span className="md:hidden text-secondary/50 mr-1">Unit price:</span>
-                            ${itemPrice.toFixed(2)}
+                            <span className="font-bold text-primary">${itemPrice.toFixed(2)}</span>
+                            {automaticDiscount && (
+                              <>
+                                <span className="ml-1.5 text-secondary/45 line-through">
+                                  ${originalItemPrice.toFixed(2)}
+                                </span>
+                                <span className="mt-1 block text-[10px] font-bold text-error">
+                                  -{automaticDiscount.discountPercentage}%
+                                </span>
+                              </>
+                            )}
                           </div>
 
                           {/* Sum Cost Subtotal Column */}
                           <div className="col-span-4 md:col-span-2 text-right text-sm font-bold text-primary">
                             ${itemSum.toFixed(2)}
+                            {automaticDiscount && (
+                              <span className="block text-[10px] font-medium text-secondary/45 line-through">
+                                ${(originalItemPrice * item.quantity).toFixed(2)}
+                              </span>
+                            )}
                           </div>
                         </motion.div>
                       );
@@ -628,7 +678,6 @@ export default function CartView({ initialProducts }: CartViewProps) {
                     </h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {frequentlyBought.map(prod => {
-                        const recPrice = parseFloat(prod.priceRange.minVariantPrice.amount).toFixed(2);
                         return (
                           <div 
                             key={prod.id}
@@ -655,7 +704,13 @@ export default function CartView({ initialProducts }: CartViewProps) {
                             </h4>
                             
                             <div className="flex justify-between items-center mt-auto pt-2">
-                              <span className="text-primary font-bold text-xs">${recPrice}</span>
+                              <ProductSalePrice
+                                product={prod}
+                                className="flex flex-wrap items-baseline gap-1.5"
+                                priceClassName="text-xs font-bold text-primary"
+                                originalPriceClassName="text-[10px] text-secondary/45 line-through"
+                                discountClassName="rounded-full bg-error px-1.5 py-0.5 text-[9px] font-bold text-white"
+                              />
                               <button 
                                 onClick={() => handleAddFromRecommendations(prod)}
                                 className="text-primary hover:text-on-primary-container transition-colors focus:ring-1 focus:ring-primary rounded-full cursor-pointer"
@@ -683,13 +738,30 @@ export default function CartView({ initialProducts }: CartViewProps) {
                   <div className="space-y-4 pb-6 border-b border-outline-variant/30 text-xs sm:text-sm">
                     <div className="flex justify-between items-center text-secondary">
                       <span>Subtotal</span>
-                      <span className="text-on-surface font-semibold">${subtotal.toFixed(2)}</span>
+                      <span className="text-on-surface font-semibold">${originalSubtotal.toFixed(2)}</span>
                     </div>
+
+                    {automaticDiscountAmount > 0 && (
+                      <div className="flex items-start justify-between gap-4 font-medium text-error">
+                        <span>
+                          {automaticDiscountTitle}
+                          {automaticDiscountPercentage > 0 && ` (-${automaticDiscountPercentage}%)`}
+                        </span>
+                        <span className="shrink-0">-${automaticDiscountAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+
+                    {automaticDiscountAmount > 0 && (
+                      <div className="flex justify-between items-center text-secondary">
+                        <span>Discounted subtotal</span>
+                        <span className="font-semibold text-primary">${discountedSubtotal.toFixed(2)}</span>
+                      </div>
+                    )}
 
                     {appliedPromo && (
                       <div className="flex justify-between items-center text-primary font-medium">
                         <span>Promo Discount ({appliedPromo})</span>
-                        <span>-${discountAmount.toFixed(2)}</span>
+                        <span>-${promoDiscountAmount.toFixed(2)}</span>
                       </div>
                     )}
 

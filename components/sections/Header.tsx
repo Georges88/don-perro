@@ -8,20 +8,53 @@ import { getWishlist } from "@/lib/wishlist";
 import { getCurrentUser } from "@/lib/auth";
 import type { MenuItem } from "@/types/shopify";
 
-const DOG_NAV_ITEMS: MenuItem[] = [
-  { label: "Dog Treats", href: "/shop?category=dog&type=Dog%20Treats", items: [] },
-  { label: "Dog Wet Food", href: "/shop?category=dog&type=Dog%20Wet%20Food", items: [] },
-  { label: "Dog Dry Food", href: "/shop?category=dog&type=Dog%20Dry%20Food", items: [] },
-  { label: "Dog Shampoo", href: "/shop?category=dog&type=Dog%20Shampoo", items: [] },
-];
+const DOG_PRODUCT_TYPES = [
+  "Bowls And Feeders",
+  "Brushes",
+  "Collars",
+  "Crates & Bags",
+  "Dog Dry Food",
+  "Dog Shampoo",
+  "Dog Treats",
+  "Dog Wet Food",
+  "Harnesses",
+  "Health & Wellness",
+  "Ice Cream",
+  "Leashes",
+  "Perfumes",
+  "Pet Milk",
+  "Toys",
+] as const;
 
-const CAT_NAV_ITEMS: MenuItem[] = [
-  { label: "Cat Litter", href: "/shop?category=cat&type=Cat%20Litter", items: [] },
-  { label: "Cat Wet Food", href: "/shop?category=cat&type=Cat%20Wet%20Food", items: [] },
-  { label: "Cat Dry Food", href: "/shop?category=cat&type=Cat%20Dry%20Food", items: [] },
-  { label: "Cat Shampoo", href: "/shop?category=cat&type=Cat%20Shampoo", items: [] },
-  { label: "Cat Treats", href: "/shop?category=cat&type=Cat%20Treats", items: [] },
-];
+const DOG_NAV_ITEMS: MenuItem[] = DOG_PRODUCT_TYPES.map((label) => ({
+  label,
+  href: `/shop?category=dog&type=${encodeURIComponent(label)}`,
+  items: [],
+}));
+
+const CAT_PRODUCT_TYPES = [
+  "Bowls And Feeders",
+  "Brushes",
+  "Cat Dry Food",
+  "Cat Litter",
+  "Cat Shampoo",
+  "Cat Treats",
+  "Cat Wet Food",
+  "Collars",
+  "Crates & Bags",
+  "Harnesses",
+  "Health & Wellness",
+  "Leashes",
+  "Perfumes",
+  "Pet Milk",
+  "Toys",
+] as const;
+
+const CAT_NAV_ITEMS: MenuItem[] = CAT_PRODUCT_TYPES.map((label) => ({
+  label,
+  href: `/shop?category=cat&type=${encodeURIComponent(label)}`,
+  items: [],
+}));
 
 const FALLBACK_NAV_ITEMS: MenuItem[] = [
   { label: "Shop All", href: "/shop", items: [] },
@@ -295,6 +328,7 @@ export default function Header() {
           {navItems.map((item) => {
             const navKey = `${item.label}-${item.href}`;
             const isActive = activeNavKey === navKey;
+            const isPetCategoryGrid = ["dogs", "cats"].includes(item.label.trim().toLowerCase());
 
             if (item.items.length === 0) {
               return (
@@ -325,13 +359,19 @@ export default function Header() {
                   {item.label}
                   <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
                 </button>
-                <div className="invisible absolute left-1/2 top-full z-50 w-48 -translate-x-1/2 pt-4 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
-                  <div className="overflow-hidden rounded-xl border border-outline/10 bg-white py-1.5 shadow-[0px_14px_35px_rgba(90,96,90,0.12)]">
+                <div className={`invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-4 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100 ${
+                  isPetCategoryGrid ? "w-[min(42rem,calc(100vw-3rem))]" : "w-48"
+                }`}>
+                  <div className={`overflow-hidden rounded-xl border border-outline/10 bg-white shadow-[0px_14px_35px_rgba(90,96,90,0.12)] ${
+                    isPetCategoryGrid ? "grid grid-cols-3 gap-1 p-2" : "py-1.5"
+                  }`}>
                     {item.items.map((child) => (
                       <Link
                         key={`${child.label}-${child.href}`}
                         href={child.href}
-                        className="block px-4 py-2.5 text-xs font-bold text-secondary transition-colors hover:bg-primary-container/15 hover:text-primary"
+                        className={`px-4 py-2.5 text-xs font-bold text-secondary transition-colors hover:bg-primary-container/15 hover:text-primary ${
+                          isPetCategoryGrid ? "flex min-h-10 items-center rounded-lg" : "block"
+                        }`}
                       >
                         {child.label}
                       </Link>
@@ -458,6 +498,7 @@ export default function Header() {
             {navItems.map((item) => {
               const navKey = `${item.label}-${item.href}`;
               const isActive = activeNavKey === navKey;
+              const isPetCategoryGrid = ["dogs", "cats"].includes(item.label.trim().toLowerCase());
 
               return (
                 <div key={`${item.label}-${item.href}`} className="border-b border-secondary-container/10 pb-2">
@@ -485,13 +526,13 @@ export default function Header() {
                     </Link>
                   )}
                   {item.items.length > 0 && (
-                    <div className="pl-4">
+                    <div className={isPetCategoryGrid ? "grid grid-cols-3 gap-x-2 pl-4" : "pl-4"}>
                       {item.items.map((child) => (
                         <Link
                           key={`${child.label}-${child.href}`}
                           href={child.href}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          className="block py-1.5 text-sm font-semibold text-secondary/85 transition-colors hover:text-primary"
+                          className={`${isPetCategoryGrid ? "flex min-h-10 items-center text-xs leading-tight" : "block py-1.5 text-sm"} font-semibold text-secondary/85 transition-colors hover:text-primary`}
                         >
                           {child.label}
                         </Link>
