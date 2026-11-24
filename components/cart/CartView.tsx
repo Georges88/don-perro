@@ -12,9 +12,6 @@ import {
   ShoppingBag, 
   Check, 
   X, 
-  Lock, 
-  ShieldCheck, 
-  Truck, 
   PlusCircle, 
   Sparkles 
 } from "lucide-react";
@@ -256,7 +253,7 @@ export default function CartView({ initialProducts }: CartViewProps) {
       setPromoSuccessMessage(`Promo code "${code}" applied: 15% discount!`);
       showToast(`Promo code "${code}" applied successfully.`);
     } else {
-      setPromoError("Invalid code. Try 'PETLOVE' or 'DONPERRO'.");
+      setPromoError("Invalid code.");
     }
   };
 
@@ -845,22 +842,6 @@ export default function CartView({ initialProducts }: CartViewProps) {
                     {promoSuccessMessage && (
                       <p className="text-[11px] text-primary font-bold mt-2 text-left">{promoSuccessMessage}</p>
                     )}
-                  </div>
-
-                  {/* Trust indicator icons footer */}
-                  <div className="mt-6 flex justify-center gap-6 text-secondary/40 border-t border-outline-variant/10 pt-6">
-                    <div className="group relative flex flex-col items-center">
-                      <Lock className="w-5 h-5 hover:text-primary transition-all cursor-pointer" />
-                      <span className="absolute bottom-full mb-1 bg-inverse-surface text-inverse-on-surface text-[9px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Secure checkout</span>
-                    </div>
-                    <div className="group relative flex flex-col items-center">
-                      <ShieldCheck className="w-5 h-5 hover:text-primary transition-all cursor-pointer" />
-                      <span className="absolute bottom-full mb-1 bg-inverse-surface text-inverse-on-surface text-[9px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Guaranteed Quality</span>
-                    </div>
-                    <div className="group relative flex flex-col items-center">
-                      <Truck className="w-5 h-5 hover:text-primary transition-all cursor-pointer" />
-                      <span className="absolute bottom-full mb-1 bg-inverse-surface text-inverse-on-surface text-[9px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Express Shipping</span>
-                    </div>
                   </div>
 
                 </div>

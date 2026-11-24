@@ -102,9 +102,12 @@ export default function Footer() {
               <li>
                 <Link
                   href="/track-order"
-                  className="hover:text-primary-fixed transition-colors"
+                  className="inline-flex items-center gap-2 hover:text-primary-fixed transition-colors"
                 >
                   Track Your Order
+                  <span className="rounded-full bg-on-secondary/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary-fixed">
+                    Soon
+                  </span>
                 </Link>
               </li>
               <li>
