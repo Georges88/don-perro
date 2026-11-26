@@ -229,23 +229,6 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
     updatePageQuery(1);
   };
 
-  const changeItemsPerPage = (count: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-
-    params.delete("page");
-    if (count === 10) {
-      params.delete("perPage");
-    } else {
-      params.set("perPage", String(count));
-    }
-
-    setItemsPerPage(count);
-    setCurrentPage(1);
-
-    const query = params.toString();
-    router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
-  };
-
   const hasActiveFilters = selectedCategories.length > 0
     || selectedTypes.length > 0
     || selectedTags.length > 0
@@ -483,6 +466,30 @@ function BoutiqueCatalogContent({ initialProducts }: BoutiqueCatalogProps) {
   // Calculate Paginated variables
   const totalProducts = filteredAndSortedProducts.length;
   const totalPages = Math.max(1, Math.ceil(totalProducts / itemsPerPage));
+
+  const changeItemsPerPage = (count: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const nextTotalPages = Math.max(1, Math.ceil(totalProducts / count));
+    const nextPage = Math.min(currentPage, nextTotalPages);
+
+    if (nextPage <= 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(nextPage));
+    }
+
+    if (count === 10) {
+      params.delete("perPage");
+    } else {
+      params.set("perPage", String(count));
+    }
+
+    setItemsPerPage(count);
+    setCurrentPage(nextPage);
+
+    const query = params.toString();
+    router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
+  };
   
   // Safe adjust page
   const activePage = Math.min(currentPage, totalPages);
